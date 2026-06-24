@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "primary_key": "EAN",
+  "products": {
+    "194004582027": {
+      "EAN": "194004582027",
+      "amazon": {
+        "title": "Columbia Men's Polyester Blend Regular Jacket",
+        "image": "https://m.media-amazon.com/images/I/61k+xVakegL._SL1100_.jpg",
+        "url": "https://www.amazon.in/dp/B0B9B8YJ44",
+        "price": "₹14,999.00"
+      },
+      "ajio": {
+        "status": "blocked"
+      },
+      "updated_at": "2026-06-23T15:11:19"
+    }
+  },
+  "updated_at": "2026-06-23T15:11:19"
+}

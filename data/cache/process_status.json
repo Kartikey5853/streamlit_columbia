@@ -1,0 +1,110 @@
+{
+  "matcher": {
+    "running": false,
+    "pid": null,
+    "child_pid": null,
+    "current_ean": null,
+    "success_count": 0,
+    "failure_count": 1,
+    "warning_count": 0,
+    "started_at": "2026-06-24T14:21:18",
+    "updated_at": "2026-06-24T14:30:32",
+    "message": "Failed: CUDA out of memory. Tried to allocate 1.33 GiB. GPU 0 has a total capacity of 6.00 GiB of which 0 bytes is free. Of the allocated memory 8.76 GiB is allocated by PyTorch, and 1.41 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+  },
+  "ajio": {
+    "running": false,
+    "pid": 6732,
+    "child_pid": 14900,
+    "current_ean": null,
+    "success_count": 0,
+    "failure_count": 0,
+    "warning_count": 0,
+    "started_at": "2026-06-23T18:55:16",
+    "updated_at": "2026-06-23T18:56:34",
+    "message": "Process exited"
+  },
+  "amazon": {
+    "running": false,
+    "pid": null,
+    "child_pid": null,
+    "current_ean": null,
+    "success_count": 0,
+    "failure_count": 178,
+    "warning_count": 7,
+    "started_at": "2026-06-23T15:40:55",
+    "updated_at": "2026-06-23T15:41:16",
+    "message": "Stopped by user"
+  },
+  "amazon_refresh": {
+    "running": false,
+    "pid": null,
+    "child_pid": null,
+    "current_ean": null,
+    "success_count": 0,
+    "failure_count": 0,
+    "warning_count": 0,
+    "started_at": "2026-06-23T18:53:50",
+    "updated_at": "2026-06-23T18:54:16",
+    "message": "Stopped by user"
+  },
+  "myntra": {
+    "running": false,
+    "pid": null,
+    "child_pid": null,
+    "current_ean": null,
+    "success_count": 0,
+    "failure_count": 1,
+    "warning_count": 0,
+    "started_at": "2026-06-23T18:13:02",
+    "updated_at": "2026-06-23T18:13:07",
+    "message": "Stopped by user"
+  },
+  "tatacliq_refresh": {
+    "running": false,
+    "pid": 17116,
+    "child_pid": null,
+    "current_ean": null,
+    "success_count": 0,
+    "failure_count": 0,
+    "warning_count": 0,
+    "started_at": "2026-06-23T18:13:58",
+    "updated_at": "2026-06-23T18:15:10",
+    "message": "Process exited"
+  },
+  "columbia": {
+    "running": false,
+    "pid": null,
+    "child_pid": null,
+    "current_ean": null,
+    "success_count": 0,
+    "failure_count": 4,
+    "warning_count": 0,
+    "started_at": "2026-06-23T18:38:08",
+    "updated_at": "2026-06-23T18:38:19",
+    "message": "Stopped by user"
+  },
+  "adventuras": {
+    "running": false,
+    "pid": null,
+    "child_pid": null,
+    "current_ean": null,
+    "success_count": 0,
+    "failure_count": 0,
+    "warning_count": 1,
+    "started_at": "2026-06-23T19:03:17",
+    "updated_at": "2026-06-23T19:03:48",
+    "message": "Stopped by user"
+  },
+  "myntra_refresh": {
+    "running": false,
+    "pid": null,
+    "child_pid": null,
+    "current_ean": null,
+    "success_count": 0,
+    "failure_count": 0,
+    "warning_count": 0,
+    "started_at": "2026-06-23T18:54:26",
+    "updated_at": "2026-06-23T18:54:43",
+    "message": "Stopped by user"
+  }
+}

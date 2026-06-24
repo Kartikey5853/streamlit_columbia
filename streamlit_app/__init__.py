@@ -1,0 +1,1 @@
+"""Streamlit administration dashboard."""

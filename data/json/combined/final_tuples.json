@@ -1,0 +1,1229 @@
+{
+  "schema_version": 1,
+  "primary_key": "EAN",
+  "created_at": "2026-06-23T18:07:10",
+  "rules": {
+    "threshold": 0.82,
+    "weights": {
+      "clip": 0.4,
+      "dinov2": 0.4,
+      "title": 0.1,
+      "price": 0.1
+    },
+    "price_penalty": {
+      "<=500": "none",
+      "500-1000": 0.65,
+      "1000-5000": 0.2,
+      ">5000": 0.0
+    }
+  },
+  "summary": {
+    "tuples": 54,
+    "accepted_cross_market_matches": 24
+  },
+  "products": {
+    "191454749611": {
+      "EAN": "191454749611",
+      "amazon": {
+        "title": "Columbia Women Fast Trek II Fleece Jacket for Hiking | Trekking | Camping | Safari | Winter Sports | Outdoor Lifestyle",
+        "image": "https://m.media-amazon.com/images/I/61FNUUThRVL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0B9BDHKK2",
+        "price": "₹2,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "192660016474": {
+      "EAN": "192660016474",
+      "amazon": {
+        "title": "Columbia Men Insulated Jacket",
+        "image": "https://m.media-amazon.com/images/I/61PmAYfUfCL._SL1200_.jpg",
+        "url": "https://www.amazon.in/dp/B07RC8CJD1",
+        "price": "₹7,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "192660069524": {
+      "EAN": "192660069524",
+      "amazon": {
+        "title": "Columbia Men Powder Lite Jacket",
+        "image": "https://m.media-amazon.com/images/I/61xIzU8NxPL._SL1200_.jpg",
+        "url": "https://www.amazon.in/dp/B07JW4SYK4",
+        "price": "₹9,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Powder Lite II Jacket",
+        "image": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/32224648/2025/1/6/b6898044-5859-480b-9e2f-c96edd5d06201736177660130ColumbiaMensGreenOmni-HeatReflectivePowderLiteIIJacket1.jpg",
+        "url": "https://www.myntra.com/jackets/columbia/columbia-men-powder-lite-ii-omniheat-jacket/32224648/buy",
+        "price": "Rs. 9999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.885386049747467,
+          "dinov2_score": 0.8740545511245728,
+          "title_score": 0.797336,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.88351,
+          "accepted": true
+        }
+      }
+    },
+    "193553188247": {
+      "EAN": "193553188247",
+      "amazon": {
+        "title": "Columbia Mens Fast Trek II Full Zip Fleece Jacket, Grey Assorted, S",
+        "image": "https://m.media-amazon.com/images/I/61hdF96p9KL._SL1200_.jpg",
+        "url": "https://www.amazon.in/dp/B07V2BSQGQ",
+        "price": "₹3,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Fast Trek Puffer Jacket",
+        "image": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/FEBRUARY/19/IvPJZvvH_e6dfc197502e4d7b965bf3e485fe55f9.jpg",
+        "url": "https://www.myntra.com/jackets/columbia/columbia-fast-trek-overlay-stand-collar-puffer-jacket/40152959/buy",
+        "price": "Rs. 3999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.8868178129196167,
+          "dinov2_score": 0.8794099688529968,
+          "title_score": 0.382323,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.844723,
+          "accepted": true
+        }
+      }
+    },
+    "193553689300": {
+      "EAN": "193553689300",
+      "amazon": {
+        "title": "Columbia Women Outdry SH/FT Mid Casual Shoes",
+        "image": "https://m.media-amazon.com/images/I/71jsQIc5R1L._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B07YDFYHTG",
+        "price": "₹13,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "193855223233": {
+      "EAN": "193855223233",
+      "amazon": {
+        "title": "Columbia Mens Delta Ridge Down Hooded Jacket",
+        "image": "https://m.media-amazon.com/images/I/51v4DP6T89L._SL1100_.jpg",
+        "url": "https://www.amazon.in/dp/B0B9B7HH2X",
+        "price": "₹12,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Delta Ridge II Down Jacket",
+        "image": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2025/JULY/16/YSX3gYSq_2c053ce9e6894879980e08f5450135b0.jpg",
+        "url": "https://www.myntra.com/jackets/columbia/columbia-delta-ridge-ii-down-jacket/35747023/buy",
+        "price": "Rs. 12999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.7933942079544067,
+          "dinov2_score": 0.8681864738464355,
+          "title_score": 0.716878,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.83632,
+          "accepted": true
+        }
+      }
+    },
+    "193855649002": {
+      "EAN": "193855649002",
+      "amazon": {
+        "title": "Columbia Men Fast Trek II Fleece Hiking and Trekking Jacket| Standard Length",
+        "image": "https://m.media-amazon.com/images/I/61HvVu04QoL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B08LCMN2FD",
+        "price": "₹3,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Fast Trek Puffer Jacket",
+        "image": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/FEBRUARY/19/IvPJZvvH_e6dfc197502e4d7b965bf3e485fe55f9.jpg",
+        "url": "https://www.myntra.com/jackets/columbia/columbia-fast-trek-overlay-stand-collar-puffer-jacket/40152959/buy",
+        "price": "Rs. 3999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.8914202451705933,
+          "dinov2_score": 0.8973995447158813,
+          "title_score": 0.365236,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.852052,
+          "accepted": true
+        }
+      }
+    },
+    "194004381866": {
+      "EAN": "194004381866",
+      "amazon": {
+        "title": "Columbia Men's Powder Lite Hooded Jacket",
+        "image": "https://m.media-amazon.com/images/I/61grgPmO1oL._SL1100_.jpg",
+        "url": "https://www.amazon.in/dp/B08MPM31SB",
+        "price": "₹10,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "194004582027": {
+      "EAN": "194004582027",
+      "amazon": {
+        "title": "Columbia Men's Polyester Blend Regular Jacket",
+        "image": "https://m.media-amazon.com/images/I/61k+xVakegL._SL1100_.jpg",
+        "url": "https://www.amazon.in/dp/B0B9B8YJ44",
+        "price": "₹14,999.00"
+      },
+      "ajio": {
+        "title": null,
+        "image": null,
+        "url": null,
+        "price": null
+      },
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "194004642707": {
+      "EAN": "194004642707",
+      "amazon": {
+        "title": "Columbia Men Omni-Heat Inifnity Labyrinth Loop Hiking and Trekking Down Jacket",
+        "image": "https://m.media-amazon.com/images/I/61prbm3AjLL._SL1100_.jpg",
+        "url": "https://www.amazon.in/dp/B0B9B5SWFC",
+        "price": "₹13,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "194895265658": {
+      "EAN": "194895265658",
+      "amazon": {
+        "title": "Columbia Men Omni-Heat Reflective Whirlibird IV Snow Interchangeable Jacket",
+        "image": "https://m.media-amazon.com/images/I/61dDbxPEmJL._SL1100_.jpg",
+        "url": "https://www.amazon.in/dp/B09QFV5MKL",
+        "price": "₹18,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "194895488132": {
+      "EAN": "194895488132",
+      "amazon": {
+        "title": "Columbia Men Omni-Heat Inifnity Platinum Peak Hooded Hiking and Trekking Down Jacket",
+        "image": "https://m.media-amazon.com/images/I/71v0mFkvi4L._SL1100_.jpg",
+        "url": "https://www.amazon.in/dp/B0B9B9V823",
+        "price": "₹17,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "194895592433": {
+      "EAN": "194895592433",
+      "amazon": {
+        "title": "Columbia Men Polyester Solid Regular Jacket",
+        "image": "https://m.media-amazon.com/images/I/71OhyVhfIeL._SL1100_.jpg",
+        "url": "https://www.amazon.in/dp/B0B9BDL7RQ",
+        "price": "₹3,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "195979745677": {
+      "EAN": "195979745677",
+      "amazon": {
+        "title": "Columbia Women Facet 75 Alpha Hiking & Trekking Shoes",
+        "image": "https://m.media-amazon.com/images/I/61CEm9WUMTL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0BKZ3LHRT",
+        "price": "₹17,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Facet Women Trekking Shoes",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2024/AUGUST/29/VQQ4534V_48242d2caf3f4e9699af06f438889d6b.jpg",
+        "url": "https://www.myntra.com/sports-shoes/columbia/columbia-women-facet-75-alpha-outdry-shoes/30749926/buy",
+        "price": "Rs. 17999"
+      },
+      "tatacliq": {
+        "title": "Columbia Women Black Facet 75 Alpha Hiking & Trekking Shoes",
+        "image": "https://img.tatacliq.com/images/i20//437Wx649H/MP000000023865239_437Wx649H_202409270839341.jpeg",
+        "url": "https://www.tatacliq.com/columbia-women-black-facet-75-alpha-hiking-trekking-shoes/p-mp000000023865228",
+        "price": "Rs. 2",
+        "price_value": 2.0,
+        "price_refreshed_at": "2026-06-23T18:14:04"
+      },
+      "match": {
+        "myntra": {
+          "clip_score": 0.8696727752685547,
+          "dinov2_score": 0.8738020062446594,
+          "title_score": 0.571591,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.854549,
+          "accepted": true
+        },
+        "tatacliq": {
+          "clip_score": 0.888393,
+          "dinov2_score": 0.888393,
+          "title_score": 0.888393,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.899554,
+          "accepted": true
+        }
+      }
+    },
+    "195980113014": {
+      "EAN": "195980113014",
+      "amazon": {
+        "title": "Columbia Women Omni-Wick Tamiami II Hiking and Trekking Long Sleeve Shirt",
+        "image": "https://m.media-amazon.com/images/I/61sSVouRugL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0C62GSTDZ",
+        "price": "₹2,599.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "195980174961": {
+      "EAN": "195980174961",
+      "amazon": {
+        "title": "Columbia Men Omni-Shield Wanoga Lightweight Hiking and Trekking Pant",
+        "image": "https://m.media-amazon.com/images/I/61S7J6CPxiL._SL1100_.jpg",
+        "url": "https://www.amazon.in/dp/B0CRKQM21N",
+        "price": "₹5,478.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "195980329057": {
+      "EAN": "195980329057",
+      "amazon": {
+        "title": "Columbia Men Columbia Hike Polo",
+        "image": "https://m.media-amazon.com/images/I/71vURwhZaSL._SL1100_.jpg",
+        "url": "https://www.amazon.in/dp/B0CRL2L5YT",
+        "price": "₹1,529.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "195980998680": {
+      "EAN": "195980998680",
+      "amazon": {
+        "title": "Columbia Women Sequoia Grove Fleece Jacket for Hiking | Trekking",
+        "image": "https://m.media-amazon.com/images/I/61TgirBfelL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0D5JYGCFQ",
+        "price": "₹3,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Sequoia Grove Fleece Jacket",
+        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/2025/DECEMBER/31/1pFCXd4g_eccc948aa78b47faa4ba0a546d580a0e.jpg",
+        "url": "https://www.myntra.com/jackets/columbia/columbia-sequoia-grove-stand-collar-jacket/39064185/buy",
+        "price": "Rs. 3999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.8081604242324829,
+          "dinov2_score": 0.8915960788726807,
+          "title_score": 0.685333,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.848436,
+          "accepted": true
+        }
+      }
+    },
+    "195981057003": {
+      "EAN": "195981057003",
+      "amazon": {
+        "title": "Columbia Unisex Omni-Shade Bora Bora Booney Hat for Hiking | Trekking | Camping | Safari | Sun Protection",
+        "image": "https://m.media-amazon.com/images/I/61eyl83IWOL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0CLPZ53XB",
+        "price": "₹1,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "195981122619": {
+      "EAN": "195981122619",
+      "amazon": {
+        "title": "Columbia Men Glennaker Lake II Hiking and Trekking Rain Jacket",
+        "image": "https://m.media-amazon.com/images/I/61XUtdJU+0L._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0DQKMR4YJ",
+        "price": "₹3,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "195981345933": {
+      "EAN": "195981345933",
+      "amazon": {
+        "title": "Columbia Men Omni-Shade Terminal Tackle II Hiking and Trekking Pant",
+        "image": "https://m.media-amazon.com/images/I/61xkJC2seaL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0CLQPZYXS",
+        "price": "₹4,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "195981573343": {
+      "EAN": "195981573343",
+      "amazon": {
+        "title": "Columbia Men OutDry Peakfreak II Shoes for Hiking | Trekking | Fully Waterproof",
+        "image": "https://m.media-amazon.com/images/I/61N4jzLSupL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0CLW37XJJ",
+        "price": "₹12,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Peakfreak II Hiking & Trekking",
+        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/31026145/2024/10/2/4209b4af-cbe1-4240-97e4-5a23b88f2c6f1727808468015-Columbia-Men-Peakfreak-II-Mid-Outdry-Hiking--Trekking-Shoes--1.jpg",
+        "url": "https://www.myntra.com/boots/columbia/columbia-men-peakfreak-ii-waterproof-shoes/31026145/buy",
+        "price": "Rs. 12999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.9547672867774963,
+          "dinov2_score": 0.957642674446106,
+          "title_score": 0.550424,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.920006,
+          "accepted": true
+        }
+      }
+    },
+    "195981597295": {
+      "EAN": "195981597295",
+      "amazon": {
+        "title": "Columbia Mens Konos TRS Hiking & Trekking Shoes",
+        "image": "https://m.media-amazon.com/images/I/61rakvES7PL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0CLW24GC8",
+        "price": "₹10,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Konos TRS Men Trekking Shoes",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/26382164/2023/12/12/93efc5a8-0b99-4343-a430-224f4a9146f71702392562173ColumbiaMensGreyKonosTrsHikingAndTrailShoes1.jpg",
+        "url": "https://www.myntra.com/sports-shoes/columbia/columbia-mens-konos-trail-running-shoes/26382164/buy",
+        "price": "Rs. 11999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.9092292189598083,
+          "dinov2_score": 0.8838484883308411,
+          "title_score": 0.811667,
+          "price_score": 0.65,
+          "price_status": "moderate_penalty",
+          "price_difference": 1000.0,
+          "confidence": 0.863398,
+          "accepted": true
+        }
+      }
+    },
+    "195982129570": {
+      "EAN": "195982129570",
+      "amazon": {
+        "title": "Columbia Unisex Omni Shield Schooner Bank II Cachalot",
+        "image": "https://m.media-amazon.com/images/I/61dmQKmU3aL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0D4FB3HJB",
+        "price": "₹1,699.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "195982161822": {
+      "EAN": "195982161822",
+      "amazon": {
+        "title": "Columbia Men Omni-Shade Discovery Loop Windcheater for Hiking | Trekking | Sun Protection",
+        "image": "https://m.media-amazon.com/images/I/61DzU5CK-jL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0DQKN1CF2",
+        "price": "₹2,599.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Discovery Loop Windcheater",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2025/DECEMBER/31/0GUKyKrG_bc0dc98cd168498bb4c852ddf3bd4fdc.jpg",
+        "url": "https://www.myntra.com/jackets/columbia/columbia-discovery-loop-sporty-jacket/39063510/buy",
+        "price": "Rs. 2599"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.8397528529167175,
+          "dinov2_score": 0.8925323486328125,
+          "title_score": 0.414247,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.834339,
+          "accepted": true
+        }
+      }
+    },
+    "195982163741": {
+      "EAN": "195982163741",
+      "amazon": {
+        "title": "Columbia Men Omni-Shade Tamiami II Shirt for Hiking | Trekking | Camping | Safari | Sun Protection",
+        "image": "https://m.media-amazon.com/images/I/71+m5Pl0HWL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0GCT5MM8M",
+        "price": "₹2,599.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "195982196763": {
+      "EAN": "195982196763",
+      "amazon": {
+        "title": "Columbia Unisex Omni-Wick Tech Shade II Hat for Outdoor Lifestyle | Travel | Camping | Safari | Sweat Wicking",
+        "image": "https://m.media-amazon.com/images/I/416KLqo2zNL._SL1000_.jpg",
+        "url": "https://www.amazon.in/dp/B0D4FB4W3K",
+        "price": "₹1,499.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Silver Ridge IV Ball Cap",
+        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/32009025/2024/12/18/faf112a4-d1df-4e8b-921a-edac137197c21734519885779ColumbiaUnisexNavyBlueOmni-WickSilverRidgeIVBallCap1.jpg",
+        "url": "https://www.myntra.com/caps/columbia/columbia-unisex-silver-ridge-upf-50-ball-cap/32009025/buy",
+        "price": "Rs. 1499"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.8839609622955322,
+          "dinov2_score": 0.9025934338569641,
+          "title_score": 0.123239,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.826946,
+          "accepted": true
+        }
+      }
+    },
+    "195982219448": {
+      "EAN": "195982219448",
+      "amazon": {
+        "title": "Columbia Unisex Omni-Shade Silver Ridge IV Ball Cap for Outdoor Lifestyle | Travel | Camping | Safari | Sun Protection",
+        "image": "https://m.media-amazon.com/images/I/7103ZyaGn5L._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0D4FBTRFG",
+        "price": "₹1,499.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Silver Ridge IV Ball Cap",
+        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/32009025/2024/12/18/faf112a4-d1df-4e8b-921a-edac137197c21734519885779ColumbiaUnisexNavyBlueOmni-WickSilverRidgeIVBallCap1.jpg",
+        "url": "https://www.myntra.com/caps/columbia/columbia-unisex-silver-ridge-upf-50-ball-cap/32009025/buy",
+        "price": "Rs. 1499"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.9533208012580872,
+          "dinov2_score": 0.9789928197860718,
+          "title_score": 0.385123,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.911438,
+          "accepted": true
+        }
+      }
+    },
+    "195982219455": {
+      "EAN": "195982219455",
+      "amazon": {
+        "title": "Columbia Unisex Omni-Shade Silver Ridge IV Ball Cap for Outdoor Lifestyle | Travel | Camping | Safari | Sun Protection",
+        "image": "https://m.media-amazon.com/images/I/61BIxa3oPsL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0D4F9SHC3",
+        "price": "₹1,499.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Silver Ridge IV Ball Cap",
+        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/32009025/2024/12/18/faf112a4-d1df-4e8b-921a-edac137197c21734519885779ColumbiaUnisexNavyBlueOmni-WickSilverRidgeIVBallCap1.jpg",
+        "url": "https://www.myntra.com/caps/columbia/columbia-unisex-silver-ridge-upf-50-ball-cap/32009025/buy",
+        "price": "Rs. 1499"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.9155182242393494,
+          "dinov2_score": 0.9566082954406738,
+          "title_score": 0.385123,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.887363,
+          "accepted": true
+        }
+      }
+    },
+    "195982225524": {
+      "EAN": "195982225524",
+      "amazon": {
+        "title": "Columbia Unisex Omni-Shade Silver Ridge IV Ball Cap for Outdoor Lifestyle | Travel | Camping | Safari | Sun Protection",
+        "image": "https://m.media-amazon.com/images/I/71TB4mj0DML._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0D4FDTWQH",
+        "price": "₹1,499.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Silver Ridge IV Ball Cap",
+        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/32009025/2024/12/18/faf112a4-d1df-4e8b-921a-edac137197c21734519885779ColumbiaUnisexNavyBlueOmni-WickSilverRidgeIVBallCap1.jpg",
+        "url": "https://www.myntra.com/caps/columbia/columbia-unisex-silver-ridge-upf-50-ball-cap/32009025/buy",
+        "price": "Rs. 1499"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.9229162931442261,
+          "dinov2_score": 0.956238865852356,
+          "title_score": 0.385123,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.890174,
+          "accepted": true
+        }
+      }
+    },
+    "195982225548": {
+      "EAN": "195982225548",
+      "amazon": {
+        "title": "Columbia Unisex Omni-Shade Silver Ridge IV Ball Cap for Outdoor Lifestyle | Travel | Camping | Safari | Sun Protection",
+        "image": "https://m.media-amazon.com/images/I/71iGjQCcaYL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0D4F9FMTY",
+        "price": "₹1,499.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Silver Ridge IV Ball Cap",
+        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/32009025/2024/12/18/faf112a4-d1df-4e8b-921a-edac137197c21734519885779ColumbiaUnisexNavyBlueOmni-WickSilverRidgeIVBallCap1.jpg",
+        "url": "https://www.myntra.com/caps/columbia/columbia-unisex-silver-ridge-upf-50-ball-cap/32009025/buy",
+        "price": "Rs. 1499"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.9801609516143799,
+          "dinov2_score": 0.9884267449378967,
+          "title_score": 0.385123,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.925947,
+          "accepted": true
+        }
+      }
+    },
+    "195982373409": {
+      "EAN": "195982373409",
+      "amazon": {
+        "title": "Columbia Unisex Omni-Shade Coolhead Zero II Cachalot for Outdoor Lifestyle | Travel | Camping | Safari | Sun Protection",
+        "image": "https://m.media-amazon.com/images/I/61fbPOed-TL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0D62D8CD1",
+        "price": "₹1,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "195982416502": {
+      "EAN": "195982416502",
+      "amazon": {
+        "title": "Columbia Unisex Mesh Snap Back Cap for Hiking | Trekking | Camping | Safari",
+        "image": "https://m.media-amazon.com/images/I/814dwH5p4wL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0D4F8ZTXT",
+        "price": "₹1,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "195982424675": {
+      "EAN": "195982424675",
+      "amazon": {
+        "title": "Columbia Unisex Lost Lager 110 Snap Back Cap",
+        "image": "https://m.media-amazon.com/images/I/71A8YrDV-XL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0D4F99JZK",
+        "price": "₹2,499.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": {
+        "title": "Columbia Unisex Teal Lost Lager 110 Snap Back Cap(OS)",
+        "image": "https://img.tatacliq.com/images/i24//437Wx649H/MP000000025055740_437Wx649H_202505301620461.jpeg",
+        "url": "https://www.tatacliq.com/columbia-unisex-teal-lost-lager-110-snap-back-capos/p-mp000000025055740",
+        "price": "Rs. 2,499",
+        "price_value": 2499.0,
+        "price_refreshed_at": "2026-06-23T18:14:10"
+      },
+      "match": {
+        "tatacliq": {
+          "clip_score": 0.805026,
+          "dinov2_score": 0.805026,
+          "title_score": 0.805026,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.824523,
+          "accepted": true
+        }
+      }
+    },
+    "195982939605": {
+      "EAN": "195982939605",
+      "amazon": {
+        "title": "Columbia Women Glacial IV Hiking and Trekking Pullover",
+        "image": "https://m.media-amazon.com/images/I/616VwHh0OGL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0FGQBQY9Q",
+        "price": "₹2,499.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "198711190407": {
+      "EAN": "198711190407",
+      "amazon": {
+        "title": "Columbia Men's Regular Casual Pants",
+        "image": "https://m.media-amazon.com/images/I/61yxeQJZ6fL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0FGQDJ6GG",
+        "price": "₹5,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "198711360190": {
+      "EAN": "198711360190",
+      "amazon": {
+        "title": "Columbia Mens Peakfreak II Hiking & Trekking Shoes",
+        "image": "https://m.media-amazon.com/images/I/61+T+8umuZL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0DK2RPRM4",
+        "price": "₹12,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Peakfreak II Hiking & Trekking",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2025/DECEMBER/30/TVVz324r_8f4c601c879341e3b4697874b7feddde.jpg",
+        "url": "https://www.myntra.com/sports-shoes/columbia/columbia-peakfreak-ii-men-ortholite-sole-lace-ups-trekking-sports-shoes/39040333/buy",
+        "price": "Rs. 12999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.8852199912071228,
+          "dinov2_score": 0.8567732572555542,
+          "title_score": 0.826742,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.879471,
+          "accepted": true
+        }
+      }
+    },
+    "198711361777": {
+      "EAN": "198711361777",
+      "amazon": {
+        "title": "Columbia Women OutDry Peakfreak Hera Shoes for Hiking | Trekking | Fully Waterproof",
+        "image": "https://m.media-amazon.com/images/I/610Di-+oT7L._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0DK2PGKHN",
+        "price": "₹12,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Peakfreak II Hiking & Trekking",
+        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/31026145/2024/10/2/4209b4af-cbe1-4240-97e4-5a23b88f2c6f1727808468015-Columbia-Men-Peakfreak-II-Mid-Outdry-Hiking--Trekking-Shoes--1.jpg",
+        "url": "https://www.myntra.com/boots/columbia/columbia-men-peakfreak-ii-waterproof-shoes/31026145/buy",
+        "price": "Rs. 12999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.8898569941520691,
+          "dinov2_score": 0.9276217222213745,
+          "title_score": 0.423224,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.869314,
+          "accepted": true
+        }
+      }
+    },
+    "198711430480": {
+      "EAN": "198711430480",
+      "amazon": {
+        "title": "Columbia Men Casual Pants",
+        "image": "https://m.media-amazon.com/images/I/61TfE+GCNvL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0FGQ4NPPK",
+        "price": "₹5,499.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "198711874185": {
+      "EAN": "198711874185",
+      "amazon": {
+        "title": "Columbia Unisex-Adult Cap",
+        "image": "https://m.media-amazon.com/images/I/81z2oTjlnKL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0FB36Q71K",
+        "price": "₹1,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "199141028414": {
+      "EAN": "199141028414",
+      "amazon": {
+        "title": "Columbia Men Omni-Tech Inner Limits III Rain Jacket for Hiking | Trekking | Waterproof",
+        "image": "https://m.media-amazon.com/images/I/71IxKLuqPIL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0GCTCMJXV",
+        "price": "₹6,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "199141113028": {
+      "EAN": "199141113028",
+      "amazon": {
+        "title": "Columbia Mens Konos TRS Hiking & Trekking Shoes",
+        "image": "https://m.media-amazon.com/images/I/71h1DA0JdSL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0FC7QGQJX",
+        "price": "₹13,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Konos TRS Men Trekking Shoes",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/26382090/2023/12/12/95b0bfc7-213c-4549-b007-600cd42aaf9d1702388352183ColumbiaMensBlackKonosTrsOutdryHikingAndTrailShoes1.jpg",
+        "url": "https://www.myntra.com/sports-shoes/columbia/columbia-men-konos-outdry-waterproof-shoes/26382090/buy",
+        "price": "Rs. 13999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.868695855140686,
+          "dinov2_score": 0.830366849899292,
+          "title_score": 0.811667,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.860792,
+          "accepted": true
+        }
+      }
+    },
+    "199141121146": {
+      "EAN": "199141121146",
+      "amazon": {
+        "title": "Columbia Womens Konos TRS Hiking & Trekking Shoes",
+        "image": "https://m.media-amazon.com/images/I/71gDcr60KML._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0F9MDGDNC",
+        "price": "₹12,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Konos TRS Hiking & Trekking",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2025/DECEMBER/30/iflMUrSy_425ebd4c225645c8b3679e53c4782f16.jpg",
+        "url": "https://www.myntra.com/sports-shoes/columbia/columbia-konos-trs-women-ortholite-sole-lace-ups-trekking-sports-shoes/39041232/buy",
+        "price": "Rs. 12999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.9053884744644165,
+          "dinov2_score": 0.9163017868995667,
+          "title_score": 0.816471,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.910323,
+          "accepted": true
+        }
+      }
+    },
+    "199141129203": {
+      "EAN": "199141129203",
+      "amazon": {
+        "title": "Columbia Mens Peakfreak II Hiking & Trekking Shoes",
+        "image": "https://m.media-amazon.com/images/I/711pgaUeY0L._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0FB1133N5",
+        "price": "₹13,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Peakfreak II Hiking & Trekking",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2025/DECEMBER/30/sLN0zqJX_2d1863cbf6fd42bfa2d0af7fcc77729d.jpg",
+        "url": "https://www.myntra.com/sports-shoes/columbia/columbia-peakfreak-ii-men-ortholite-sole-lace-ups-trekking-sports-shoes/39040320/buy",
+        "price": "Rs. 13999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.8906733393669128,
+          "dinov2_score": 0.8675581812858582,
+          "title_score": 0.826742,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.885967,
+          "accepted": true
+        }
+      }
+    },
+    "199141133453": {
+      "EAN": "199141133453",
+      "amazon": {
+        "title": "Columbia Mens Boatside Relaxed PFG Boatside Relaxed PFG",
+        "image": "https://m.media-amazon.com/images/I/61X9gWZ5KWL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0F9MYFHV1",
+        "price": "₹7,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Boatside Relaxed PFG Water",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2024/AUGUST/10/D9h5WbBS_6af36793c1374a7eb06afc22bb7455d4.jpg",
+        "url": "https://www.myntra.com/casual-shoes/columbia/columbia-men-boatside-relaxed-water-shoes/30545798/buy",
+        "price": "Rs. 7999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.8466705083847046,
+          "dinov2_score": 0.8610041737556458,
+          "title_score": 0.751944,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.858264,
+          "accepted": true
+        }
+      }
+    },
+    "199141148761": {
+      "EAN": "199141148761",
+      "amazon": {
+        "title": "Columbia Mens Voyager FLX Pct Trail Running Shoes",
+        "image": "https://m.media-amazon.com/images/I/61WetY5WHdL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0GCT3S92Z",
+        "price": "₹9,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Voyager FLX PCT Trail Running",
+        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/2025/DECEMBER/30/i1kK4nzH_043d3273629346f890179b100526ecb8.jpg",
+        "url": "https://www.myntra.com/sports-shoes/columbia/columbia-voyager-flx-pct-men-lace-ups-running-sports-shoes/39040309/buy",
+        "price": "Rs. 9999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.8637363910675049,
+          "dinov2_score": 0.9017635583877563,
+          "title_score": 0.847414,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.890941,
+          "accepted": true
+        }
+      }
+    },
+    "199141159026": {
+      "EAN": "199141159026",
+      "amazon": {
+        "title": "Columbia Mens Konos Trillium ATR Trail Running Shoes",
+        "image": "https://m.media-amazon.com/images/I/61hrxkxrPbL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0GCT8MZSY",
+        "price": "₹12,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": {
+        "title": "Columbia Konos Trillium Running Shoes",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2025/DECEMBER/30/DFki9xfT_3f5fd3837fa54dabbe909fd9689ac6c4.jpg",
+        "url": "https://www.myntra.com/sports-shoes/columbia/columbia-konos-trillium-atr-men-lace-ups-running-sports-shoes/39040316/buy",
+        "price": "Rs. 12999"
+      },
+      "tatacliq": null,
+      "match": {
+        "myntra": {
+          "clip_score": 0.9452024698257446,
+          "dinov2_score": 0.9128087759017944,
+          "title_score": 0.724345,
+          "price_score": 1.0,
+          "price_status": "no_penalty",
+          "price_difference": 0.0,
+          "confidence": 0.915639,
+          "accepted": true
+        }
+      }
+    },
+    "199141235836": {
+      "EAN": "199141235836",
+      "amazon": {
+        "title": "Columbia Men Omni-Wick Hike Tshirt for Hiking | Trekking | Camping | Safari | Trail Running | Sweat Wicking",
+        "image": "https://m.media-amazon.com/images/I/71BPUuIKL4L._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0GCSX7TD8",
+        "price": "₹1,499.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "199141239896": {
+      "EAN": "199141239896",
+      "amazon": {
+        "title": "Columbia Men Omni-Wick Hike Polo Tshirt for Hiking | Trekking | Camping | Safari | Sweat Wicking",
+        "image": "https://m.media-amazon.com/images/I/717Q4gJ-9mL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0GCSGZBY4",
+        "price": "₹1,799.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "886108763784": {
+      "EAN": "886108763784",
+      "amazon": {
+        "title": "Columbia Men Omni-Shade Silver Ridge Convertible Pant for Hiking | Trekking | Camping | Safari | Sun Protection",
+        "image": "https://m.media-amazon.com/images/I/614BubP6J4L._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B00PIEJB8A",
+        "price": "₹4,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "886108765184": {
+      "EAN": "886108765184",
+      "amazon": {
+        "title": "Columbia Men Omni-Shade Silver Ridge Cargo Pant for Hiking | Trekking | Camping | Safari | Sun Protection",
+        "image": "https://m.media-amazon.com/images/I/61pcpD4NTOL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0DQKSS9XH",
+        "price": "₹4,466.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "887921934221": {
+      "EAN": "887921934221",
+      "amazon": {
+        "title": "Columbia Men's Cascade Ridge Ii Softshell",
+        "image": "https://m.media-amazon.com/images/I/61cpEWqfa7L._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B00KMVEMK6",
+        "price": "₹7,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "887921944671": {
+      "EAN": "887921944671",
+      "amazon": {
+        "title": "Columbia Men Grey Omni Shield Ascender Softshell Wind and Water Resistant Jacket, L",
+        "image": "https://m.media-amazon.com/images/I/81girMFaOpL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B00HQ4KUUS",
+        "price": "₹6,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    },
+    "888667411090": {
+      "EAN": "888667411090",
+      "amazon": {
+        "title": "Columbia Women Fast Trek II Fleece Jacket for Hiking | Trekking | Camping | Safari | Winter Sports | Outdoor Lifestyle",
+        "image": "https://m.media-amazon.com/images/I/615HawtT6eL._SL1500_.jpg",
+        "url": "https://www.amazon.in/dp/B0B9B96M3F",
+        "price": "₹2,999.00"
+      },
+      "ajio": null,
+      "columbia": null,
+      "adventuras": null,
+      "myntra": null,
+      "tatacliq": null,
+      "match": {}
+    }
+  },
+  "updated_at": "2026-06-23T18:14:12"
+}

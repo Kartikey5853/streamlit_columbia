@@ -1,0 +1,21 @@
+{
+  "ajio_cooldown": 20,
+  "columbia_cooldown": 2,
+  "adventuras_cooldown": 30,
+  "match_threshold": 0.82,
+  "match_clip_weight": 0.4,
+  "match_dinov2_weight": 0.4,
+  "match_title_weight": 0.1,
+  "match_price_weight": 0.1,
+  "price_no_penalty_diff": 500,
+  "price_moderate_penalty_diff": 1000,
+  "price_heavy_penalty_diff": 5000,
+  "price_moderate_score": 0.65,
+  "price_heavy_score": 0.2,
+  "price_near_rejection_score": 0.0,
+  "reject_near_price_mismatch": true,
+  "image_search_threshold": 0.84,
+  "price_refresh_delay_seconds": 1.5,
+  "use_dinov2": false,
+  "python_executable": ""
+}

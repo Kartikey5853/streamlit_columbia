@@ -1,0 +1,11 @@
+playwright
+requests
+numpy
+torch
+torchvision
+Pillow
+open_clip_torch
+faiss-cpu
+transformers
+sentencepiece
+streamlit
