@@ -1,12 +1,11 @@
 {
   "schema_version": 1,
   "primary_key": "EAN",
-  "created_at": "2026-06-23T18:07:10",
+  "created_at": "2026-06-29T21:54:19",
   "rules": {
     "threshold": 0.82,
     "weights": {
       "clip": 0.4,
-      "dinov2": 0.4,
       "title": 0.1,
       "price": 0.1
     },
@@ -19,7 +18,7 @@
   },
   "summary": {
     "tuples": 54,
-    "accepted_cross_market_matches": 24
+    "accepted_cross_market_matches": 18
   },
   "products": {
     "191454749611": {
@@ -32,7 +31,12 @@
       },
       "ajio": null,
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Women Black Fast Trek II Jacket",
+        "image": "http://www.adventuras.in/cdn/shop/files/1465351_010_f_om_preview_download.jpg?v=1754563599",
+        "url": "https://www.adventuras.in/products/fast-trek-ii-jacket-er6081-010?variant=51156044087570",
+        "price": "₹2,599.00"
+      },
       "myntra": null,
       "tatacliq": null,
       "match": {}
@@ -72,13 +76,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.885386049747467,
-          "dinov2_score": 0.8740545511245728,
+          "clip_score": 0.8853859901428223,
+          "visual_score": 0.8853859901428223,
           "title_score": 0.797336,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.88351,
+          "confidence": 0.889813,
           "accepted": true
         }
       }
@@ -103,13 +107,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.8868178129196167,
-          "dinov2_score": 0.8794099688529968,
+          "clip_score": 0.8868176937103271,
+          "visual_score": 0.8868176937103271,
           "title_score": 0.382323,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.844723,
+          "confidence": 0.821599,
           "accepted": true
         }
       }
@@ -140,25 +144,9 @@
       "ajio": null,
       "columbia": null,
       "adventuras": null,
-      "myntra": {
-        "title": "Columbia Delta Ridge II Down Jacket",
-        "image": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2025/JULY/16/YSX3gYSq_2c053ce9e6894879980e08f5450135b0.jpg",
-        "url": "https://www.myntra.com/jackets/columbia/columbia-delta-ridge-ii-down-jacket/35747023/buy",
-        "price": "Rs. 12999"
-      },
+      "myntra": null,
       "tatacliq": null,
-      "match": {
-        "myntra": {
-          "clip_score": 0.7933942079544067,
-          "dinov2_score": 0.8681864738464355,
-          "title_score": 0.716878,
-          "price_score": 1.0,
-          "price_status": "no_penalty",
-          "price_difference": 0.0,
-          "confidence": 0.83632,
-          "accepted": true
-        }
-      }
+      "match": {}
     },
     "193855649002": {
       "EAN": "193855649002",
@@ -180,13 +168,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.8914202451705933,
-          "dinov2_score": 0.8973995447158813,
+          "clip_score": 0.8914200067520142,
+          "visual_score": 0.8914200067520142,
           "title_score": 0.365236,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.852052,
+          "confidence": 0.821819,
           "accepted": true
         }
       }
@@ -214,12 +202,7 @@
         "url": "https://www.amazon.in/dp/B0B9B8YJ44",
         "price": "₹14,999.00"
       },
-      "ajio": {
-        "title": null,
-        "image": null,
-        "url": null,
-        "price": null
-      },
+      "ajio": null,
       "columbia": null,
       "adventuras": null,
       "myntra": null,
@@ -264,7 +247,12 @@
         "url": "https://www.amazon.in/dp/B0B9B9V823",
         "price": "₹17,999.00"
       },
-      "ajio": null,
+      "ajio": {
+        "title": null,
+        "image": null,
+        "url": null,
+        "price": null
+      },
       "columbia": null,
       "adventuras": null,
       "myntra": null,
@@ -294,42 +282,35 @@
         "url": "https://www.amazon.in/dp/B0BKZ3LHRT",
         "price": "₹17,999.00"
       },
-      "ajio": null,
+      "ajio": {
+        "title": null,
+        "image": null,
+        "url": null,
+        "price": null
+      },
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Women’s Black Facet 75 Alpha Waterproof Hiking Shoes - Lightweight Trail Footwear",
+        "image": "http://www.adventuras.in/cdn/shop/files/BL9621-010_1.jpg?v=1743073960",
+        "url": "https://www.adventuras.in/products/columbia-women-black-facet-75-alpha-outdry-shoes-bl9621-010?variant=51211696046354",
+        "price": "₹17,999.00"
+      },
       "myntra": {
         "title": "Columbia Facet Women Trekking Shoes",
         "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2024/AUGUST/29/VQQ4534V_48242d2caf3f4e9699af06f438889d6b.jpg",
         "url": "https://www.myntra.com/sports-shoes/columbia/columbia-women-facet-75-alpha-outdry-shoes/30749926/buy",
         "price": "Rs. 17999"
       },
-      "tatacliq": {
-        "title": "Columbia Women Black Facet 75 Alpha Hiking & Trekking Shoes",
-        "image": "https://img.tatacliq.com/images/i20//437Wx649H/MP000000023865239_437Wx649H_202409270839341.jpeg",
-        "url": "https://www.tatacliq.com/columbia-women-black-facet-75-alpha-hiking-trekking-shoes/p-mp000000023865228",
-        "price": "Rs. 2",
-        "price_value": 2.0,
-        "price_refreshed_at": "2026-06-23T18:14:04"
-      },
+      "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.8696727752685547,
-          "dinov2_score": 0.8738020062446594,
+          "clip_score": 0.8696718215942383,
+          "visual_score": 0.8696718215942383,
           "title_score": 0.571591,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.854549,
-          "accepted": true
-        },
-        "tatacliq": {
-          "clip_score": 0.888393,
-          "dinov2_score": 0.888393,
-          "title_score": 0.888393,
-          "price_score": 1.0,
-          "price_status": "no_penalty",
-          "price_difference": 0.0,
-          "confidence": 0.899554,
+          "confidence": 0.841713,
           "accepted": true
         }
       }
@@ -344,7 +325,12 @@
       },
       "ajio": null,
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Women’s Pink Omni-Wick Tamiami II Moisture-Wicking Shirt - XS",
+        "image": "https://www.adventuras.in/cdn/shop/files/FL7278-644_1.jpg?v=1743407405&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-women-red-womens-tamiami-ii-ls-shirt-fl7278-644?variant=51117768179986",
+        "price": "₹2,599.00"
+      },
       "myntra": null,
       "tatacliq": null,
       "match": {}
@@ -357,8 +343,18 @@
         "url": "https://www.amazon.in/dp/B0CRKQM21N",
         "price": "₹5,478.00"
       },
-      "ajio": null,
-      "columbia": null,
+      "ajio": {
+        "title": null,
+        "image": null,
+        "url": null,
+        "price": null
+      },
+      "columbia": {
+        "title": "Columbia Men Black Omni-Shield Wanoga Lightweight Pant - 30",
+        "image": "https://www.columbiasportswear.co.in/cdn/shop/files/AE5878-010_1.jpg?v=1743238457&width=1920",
+        "url": "https://www.columbiasportswear.co.in/products/columbia-men-black-wanoga-lightweight-pant-ae5878-010?_pos=1&_sid=d4f5bcee1&_ss=r&variant=50299489714455",
+        "price": "₹4,949.00"
+      },
       "adventuras": null,
       "myntra": null,
       "tatacliq": null,
@@ -390,25 +386,9 @@
       "ajio": null,
       "columbia": null,
       "adventuras": null,
-      "myntra": {
-        "title": "Columbia Sequoia Grove Fleece Jacket",
-        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/2025/DECEMBER/31/1pFCXd4g_eccc948aa78b47faa4ba0a546d580a0e.jpg",
-        "url": "https://www.myntra.com/jackets/columbia/columbia-sequoia-grove-stand-collar-jacket/39064185/buy",
-        "price": "Rs. 3999"
-      },
+      "myntra": null,
       "tatacliq": null,
-      "match": {
-        "myntra": {
-          "clip_score": 0.8081604242324829,
-          "dinov2_score": 0.8915960788726807,
-          "title_score": 0.685333,
-          "price_score": 1.0,
-          "price_status": "no_penalty",
-          "price_difference": 0.0,
-          "confidence": 0.848436,
-          "accepted": true
-        }
-      }
+      "match": {}
     },
     "195981057003": {
       "EAN": "195981057003",
@@ -463,9 +443,24 @@
         "url": "https://www.amazon.in/dp/B0CLW37XJJ",
         "price": "₹12,999.00"
       },
-      "ajio": null,
-      "columbia": null,
-      "adventuras": null,
+      "ajio": {
+        "title": "Men Peakfreak Mid Outdry Waterproof Trekking & Hiking Shoes",
+        "image": "https://assets.ajio.com/medias/sys_master/root/20250528/fVNo/6836b88f55340d4b4f64851c/-473Wx593H-700136171-black-MODEL.jpg",
+        "url": "https://www.ajio.com/p/700136171_black?query=:relevance&classifier=intent",
+        "price": "₹12,999.00"
+      },
+      "columbia": {
+        "title": "Columbia Men Black PEAKFREAK II MID OutDry Waterproof Hiking Shoes",
+        "image": "http://www.columbiasportswear.co.in/cdn/shop/files/BM2138-010_1.jpg?v=1747265972",
+        "url": "https://www.columbiasportswear.co.in/products/columbia-mens-black-peakfreak-ii-mid-outdry-shoes-bm2138-010?_pos=1&_sid=ac69c6355&_ss=r&variant=50443816894743",
+        "price": "₹12,999.00"
+      },
+      "adventuras": {
+        "title": "Columbia Men Black PEAKFREAK II MID OUTDRY",
+        "image": "http://www.adventuras.in/cdn/shop/files/BM2138-010_1.jpg?v=1752746043",
+        "url": "https://www.adventuras.in/products/columbia-men-black-peakfreak-ii-mid-outdry?variant=51428830839058",
+        "price": "₹12,999.00"
+      },
       "myntra": {
         "title": "Columbia Peakfreak II Hiking & Trekking",
         "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/31026145/2024/10/2/4209b4af-cbe1-4240-97e4-5a23b88f2c6f1727808468015-Columbia-Men-Peakfreak-II-Mid-Outdry-Hiking--Trekking-Shoes--1.jpg",
@@ -476,12 +471,12 @@
       "match": {
         "myntra": {
           "clip_score": 0.9547672867774963,
-          "dinov2_score": 0.957642674446106,
+          "visual_score": 0.9547672867774963,
           "title_score": 0.550424,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.920006,
+          "confidence": 0.894916,
           "accepted": true
         }
       }
@@ -506,13 +501,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.9092292189598083,
-          "dinov2_score": 0.8838484883308411,
+          "clip_score": 0.9092292785644531,
+          "visual_score": 0.9092292785644531,
           "title_score": 0.811667,
           "price_score": 0.65,
           "price_status": "moderate_penalty",
           "price_difference": 1000.0,
-          "confidence": 0.863398,
+          "confidence": 0.849764,
           "accepted": true
         }
       }
@@ -543,25 +538,9 @@
       "ajio": null,
       "columbia": null,
       "adventuras": null,
-      "myntra": {
-        "title": "Columbia Discovery Loop Windcheater",
-        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2025/DECEMBER/31/0GUKyKrG_bc0dc98cd168498bb4c852ddf3bd4fdc.jpg",
-        "url": "https://www.myntra.com/jackets/columbia/columbia-discovery-loop-sporty-jacket/39063510/buy",
-        "price": "Rs. 2599"
-      },
+      "myntra": null,
       "tatacliq": null,
-      "match": {
-        "myntra": {
-          "clip_score": 0.8397528529167175,
-          "dinov2_score": 0.8925323486328125,
-          "title_score": 0.414247,
-          "price_score": 1.0,
-          "price_status": "no_penalty",
-          "price_difference": 0.0,
-          "confidence": 0.834339,
-          "accepted": true
-        }
-      }
+      "match": {}
     },
     "195982163741": {
       "EAN": "195982163741",
@@ -573,7 +552,12 @@
       },
       "ajio": null,
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Women Blue Omni-Freeze Zero Cirque River Pro Tshirt - XS",
+        "image": "https://www.adventuras.in/cdn/shop/files/AR4832-364_1.jpg?v=1743069755&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-women-teal-omni-freeze-zero-ice-cirque-river-pro-short-sleeve-crew-tshirt-ar4832-364?variant=51117479624978",
+        "price": "₹2,599.00"
+      },
       "myntra": null,
       "tatacliq": null,
       "match": {}
@@ -588,26 +572,15 @@
       },
       "ajio": null,
       "columbia": null,
-      "adventuras": null,
-      "myntra": {
-        "title": "Columbia Silver Ridge IV Ball Cap",
-        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/32009025/2024/12/18/faf112a4-d1df-4e8b-921a-edac137197c21734519885779ColumbiaUnisexNavyBlueOmni-WickSilverRidgeIVBallCap1.jpg",
-        "url": "https://www.myntra.com/caps/columbia/columbia-unisex-silver-ridge-upf-50-ball-cap/32009025/buy",
-        "price": "Rs. 1499"
+      "adventuras": {
+        "title": "Columbia Unisex Green Omni-Wick Tech Shade II Lightweight Sun Cap - O/S",
+        "image": "https://www.adventuras.in/cdn/shop/files/CU3935-348-1.jpg?v=1772103979&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-unisex-green-omni-wick-tech-shade-ii-cap-cu3935-348?variant=51853177159954",
+        "price": "₹1,499.00"
       },
+      "myntra": null,
       "tatacliq": null,
-      "match": {
-        "myntra": {
-          "clip_score": 0.8839609622955322,
-          "dinov2_score": 0.9025934338569641,
-          "title_score": 0.123239,
-          "price_score": 1.0,
-          "price_status": "no_penalty",
-          "price_difference": 0.0,
-          "confidence": 0.826946,
-          "accepted": true
-        }
-      }
+      "match": {}
     },
     "195982219448": {
       "EAN": "195982219448",
@@ -629,13 +602,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.9533208012580872,
-          "dinov2_score": 0.9789928197860718,
+          "clip_score": 0.9533208608627319,
+          "visual_score": 0.9533208608627319,
           "title_score": 0.385123,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.911438,
+          "confidence": 0.866401,
           "accepted": true
         }
       }
@@ -648,25 +621,35 @@
         "url": "https://www.amazon.in/dp/B0D4F9SHC3",
         "price": "₹1,499.00"
       },
-      "ajio": null,
+      "ajio": {
+        "title": null,
+        "image": null,
+        "url": null,
+        "price": null
+      },
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Unisex Brown Silver Ridge IV Ball Cap (Sun Protection) - OS",
+        "image": "https://www.adventuras.in/cdn/shop/files/CU4995-271_1.jpg?v=1743083696&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-unisexs-beige-omni-wick-silver-ridge-iv-ball-cap-cu4995-271?variant=51117711950098",
+        "price": "₹1,499.00"
+      },
       "myntra": {
         "title": "Columbia Silver Ridge IV Ball Cap",
-        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/32009025/2024/12/18/faf112a4-d1df-4e8b-921a-edac137197c21734519885779ColumbiaUnisexNavyBlueOmni-WickSilverRidgeIVBallCap1.jpg",
-        "url": "https://www.myntra.com/caps/columbia/columbia-unisex-silver-ridge-upf-50-ball-cap/32009025/buy",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/32009043/2024/12/18/4d382d74-a976-476f-a0ee-8501cba5a9411734520491350ColumbiaUnisexBeigeOmni-WickSilverRidgeIVBallCap1.jpg",
+        "url": "https://www.myntra.com/caps/columbia/columbia-silver-ridge-upf-50-ball-cap/32009043/buy",
         "price": "Rs. 1499"
       },
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.9155182242393494,
-          "dinov2_score": 0.9566082954406738,
+          "clip_score": 0.9379107356071472,
+          "visual_score": 0.9379107356071472,
           "title_score": 0.385123,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.887363,
+          "confidence": 0.856128,
           "accepted": true
         }
       }
@@ -684,20 +667,20 @@
       "adventuras": null,
       "myntra": {
         "title": "Columbia Silver Ridge IV Ball Cap",
-        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/32009025/2024/12/18/faf112a4-d1df-4e8b-921a-edac137197c21734519885779ColumbiaUnisexNavyBlueOmni-WickSilverRidgeIVBallCap1.jpg",
-        "url": "https://www.myntra.com/caps/columbia/columbia-unisex-silver-ridge-upf-50-ball-cap/32009025/buy",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/32009043/2024/12/18/4d382d74-a976-476f-a0ee-8501cba5a9411734520491350ColumbiaUnisexBeigeOmni-WickSilverRidgeIVBallCap1.jpg",
+        "url": "https://www.myntra.com/caps/columbia/columbia-silver-ridge-upf-50-ball-cap/32009043/buy",
         "price": "Rs. 1499"
       },
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.9229162931442261,
-          "dinov2_score": 0.956238865852356,
+          "clip_score": 0.9284474849700928,
+          "visual_score": 0.9284474849700928,
           "title_score": 0.385123,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.890174,
+          "confidence": 0.849819,
           "accepted": true
         }
       }
@@ -712,7 +695,12 @@
       },
       "ajio": null,
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Unisex Blue Silver Ridge IV Ball Cap (Sun Protection) - OS",
+        "image": "https://www.adventuras.in/cdn/shop/files/CU4995-464_1.jpg?v=1743083725&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-unisexs-navy-blue-omni-wick-silver-ridge-iv-ball-cap-cu4995-464?variant=51117712081170",
+        "price": "₹1,499.00"
+      },
       "myntra": {
         "title": "Columbia Silver Ridge IV Ball Cap",
         "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/32009025/2024/12/18/faf112a4-d1df-4e8b-921a-edac137197c21734519885779ColumbiaUnisexNavyBlueOmni-WickSilverRidgeIVBallCap1.jpg",
@@ -722,13 +710,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.9801609516143799,
-          "dinov2_score": 0.9884267449378967,
+          "clip_score": 0.9801607728004456,
+          "visual_score": 0.9801607728004456,
           "title_score": 0.385123,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.925947,
+          "confidence": 0.884294,
           "accepted": true
         }
       }
@@ -756,9 +744,19 @@
         "url": "https://www.amazon.in/dp/B0D4F8ZTXT",
         "price": "₹1,999.00"
       },
-      "ajio": null,
+      "ajio": {
+        "title": "Unisex Columbia Mesh Snap Back Cap",
+        "image": "https://assets.ajio.com/medias/sys_master/root/20250116/sOpi/67890d3f663dbe1c5fdbfcf1/-473Wx593H-700199305-brown-MODEL.jpg",
+        "url": "https://www.ajio.com/p/700199305_brown?query=:relevance&classifier=intent",
+        "price": "₹1,999.00"
+      },
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Unisex Brown Columbia Mesh Snap Back - High - OS",
+        "image": "https://www.adventuras.in/cdn/shop/files/CU9186-262-1.jpg?v=1747900899&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-unisexs-brown-mesh-snap-back-high-crown-cap-cu9186-262?variant=51117725581586",
+        "price": "₹1,999.00"
+      },
       "myntra": null,
       "tatacliq": null,
       "match": {}
@@ -775,26 +773,8 @@
       "columbia": null,
       "adventuras": null,
       "myntra": null,
-      "tatacliq": {
-        "title": "Columbia Unisex Teal Lost Lager 110 Snap Back Cap(OS)",
-        "image": "https://img.tatacliq.com/images/i24//437Wx649H/MP000000025055740_437Wx649H_202505301620461.jpeg",
-        "url": "https://www.tatacliq.com/columbia-unisex-teal-lost-lager-110-snap-back-capos/p-mp000000025055740",
-        "price": "Rs. 2,499",
-        "price_value": 2499.0,
-        "price_refreshed_at": "2026-06-23T18:14:10"
-      },
-      "match": {
-        "tatacliq": {
-          "clip_score": 0.805026,
-          "dinov2_score": 0.805026,
-          "title_score": 0.805026,
-          "price_score": 1.0,
-          "price_status": "no_penalty",
-          "price_difference": 0.0,
-          "confidence": 0.824523,
-          "accepted": true
-        }
-      }
+      "tatacliq": null,
+      "match": {}
     },
     "195982939605": {
       "EAN": "195982939605",
@@ -821,7 +801,12 @@
       },
       "ajio": null,
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Men Navy Blue Omni-Shield Roc Tech Chino Pant Chino Pant - 30",
+        "image": "https://www.adventuras.in/cdn/shop/files/AE8535-464-1.jpg?v=1753692334&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-men-navy-blue-omnishield-roc-tech-chino-pant?variant=51510603219218",
+        "price": "₹5,999.00"
+      },
       "myntra": null,
       "tatacliq": null,
       "match": {}
@@ -834,9 +819,19 @@
         "url": "https://www.amazon.in/dp/B0DK2RPRM4",
         "price": "₹12,999.00"
       },
-      "ajio": null,
+      "ajio": {
+        "title": null,
+        "image": null,
+        "url": null,
+        "price": null
+      },
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Men's Olive Green OutDry Peakfreak II Waterproof Hiking Shoes - UK-6",
+        "image": "https://www.adventuras.in/cdn/shop/files/BM8753-383-2.jpg?v=1772103860&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-men-olive-green-outdry-peakfreak-ii-hiking-trekking-bm8753-383?variant=51853175619858",
+        "price": "₹12,999.00"
+      },
       "myntra": {
         "title": "Columbia Peakfreak II Hiking & Trekking",
         "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2025/DECEMBER/30/TVVz324r_8f4c601c879341e3b4697874b7feddde.jpg",
@@ -846,13 +841,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.8852199912071228,
-          "dinov2_score": 0.8567732572555542,
+          "clip_score": 0.885220468044281,
+          "visual_score": 0.885220468044281,
           "title_score": 0.826742,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.879471,
+          "confidence": 0.894604,
           "accepted": true
         }
       }
@@ -869,21 +864,21 @@
       "columbia": null,
       "adventuras": null,
       "myntra": {
-        "title": "Columbia Peakfreak II Hiking & Trekking",
-        "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/31026145/2024/10/2/4209b4af-cbe1-4240-97e4-5a23b88f2c6f1727808468015-Columbia-Men-Peakfreak-II-Mid-Outdry-Hiking--Trekking-Shoes--1.jpg",
-        "url": "https://www.myntra.com/boots/columbia/columbia-men-peakfreak-ii-waterproof-shoes/31026145/buy",
+        "title": "Columbia Peakfreak Hera Trekking Shoes",
+        "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2025/DECEMBER/30/U5xqT1WT_098ed167de2547848a2d40665193d28a.jpg",
+        "url": "https://www.myntra.com/sports-shoes/columbia/columbia-peakfreak-hera-women-ortholite-sole-lace-ups-trekking-sports-shoes/39041237/buy",
         "price": "Rs. 12999"
       },
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.8898569941520691,
-          "dinov2_score": 0.9276217222213745,
-          "title_score": 0.423224,
+          "clip_score": 0.9105327129364014,
+          "visual_score": 0.9105327129364014,
+          "title_score": 0.521694,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.869314,
+          "confidence": 0.860637,
           "accepted": true
         }
       }
@@ -896,9 +891,24 @@
         "url": "https://www.amazon.in/dp/B0FGQ4NPPK",
         "price": "₹5,499.00"
       },
-      "ajio": null,
-      "columbia": null,
-      "adventuras": null,
+      "ajio": {
+        "title": null,
+        "image": null,
+        "url": null,
+        "price": null
+      },
+      "columbia": {
+        "title": "Columbia Men Green Omni-Shield Roc Tech 5 Pocket Pant - 30",
+        "image": "https://www.columbiasportswear.co.in/cdn/shop/files/AE5846-366-1.jpg?v=1753453536&width=1920",
+        "url": "https://www.columbiasportswear.co.in/products/columbia-men-green-omnishield-roc-tech-5-pocket-pant?_pos=1&_sid=45cdbe099&_ss=r&variant=50653383098647",
+        "price": "₹5,499.00"
+      },
+      "adventuras": {
+        "title": "Columbia Men Green Omni-Shield Roc Tech 5 Pocket Pant - 30",
+        "image": "https://www.adventuras.in/cdn/shop/files/AE5846-366-1.jpg?v=1753692190&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-men-green-omnishield-roc-tech-5-pocket-pant?variant=51510601580818",
+        "price": "₹5,499.00"
+      },
       "myntra": null,
       "tatacliq": null,
       "match": {}
@@ -913,7 +923,12 @@
       },
       "ajio": null,
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Unisex Blue Mesh Snap Back Cap",
+        "image": "http://www.adventuras.in/cdn/shop/files/CU9186-430-1.jpg?v=1772102735",
+        "url": "https://www.adventuras.in/products/columbia-unisex-blue-mesh-snap-back-cap-cu9186-430?variant=51853178765586",
+        "price": "₹1,999.00"
+      },
       "myntra": null,
       "tatacliq": null,
       "match": {}
@@ -953,13 +968,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.868695855140686,
-          "dinov2_score": 0.830366849899292,
+          "clip_score": 0.8686957359313965,
+          "visual_score": 0.8686957359313965,
           "title_score": 0.811667,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.860792,
+          "confidence": 0.881075,
           "accepted": true
         }
       }
@@ -984,13 +999,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.9053884744644165,
-          "dinov2_score": 0.9163017868995667,
+          "clip_score": 0.9053887128829956,
+          "visual_score": 0.9053887128829956,
           "title_score": 0.816471,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.910323,
+          "confidence": 0.906338,
           "accepted": true
         }
       }
@@ -1003,9 +1018,19 @@
         "url": "https://www.amazon.in/dp/B0FB1133N5",
         "price": "₹13,999.00"
       },
-      "ajio": null,
+      "ajio": {
+        "title": null,
+        "image": null,
+        "url": null,
+        "price": null
+      },
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Men's Olive Green OutDry Peakfreak II Waterproof Hiking & Trekking Shoes - UK-6",
+        "image": "https://www.adventuras.in/cdn/shop/files/BM2138-383-1.jpg?v=1772103732&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-men-olive-green-outdry-peakfreak-ii-hiking-trekking-bm2138-383?variant=51853172441362",
+        "price": "₹13,999.00"
+      },
       "myntra": {
         "title": "Columbia Peakfreak II Hiking & Trekking",
         "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2025/DECEMBER/30/sLN0zqJX_2d1863cbf6fd42bfa2d0af7fcc77729d.jpg",
@@ -1015,13 +1040,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.8906733393669128,
-          "dinov2_score": 0.8675581812858582,
+          "clip_score": 0.8906731605529785,
+          "visual_score": 0.8906731605529785,
           "title_score": 0.826742,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.885967,
+          "confidence": 0.898239,
           "accepted": true
         }
       }
@@ -1046,13 +1071,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.8466705083847046,
-          "dinov2_score": 0.8610041737556458,
+          "clip_score": 0.8466703295707703,
+          "visual_score": 0.8466703295707703,
           "title_score": 0.751944,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.858264,
+          "confidence": 0.856438,
           "accepted": true
         }
       }
@@ -1067,7 +1092,12 @@
       },
       "ajio": null,
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Men White Omni-Shield Voyager FLX PCT Trail Running Shoes - UK-7",
+        "image": "https://www.adventuras.in/cdn/shop/files/BM7922-100-1.jpg?v=1772103815&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-men-white-omni-shield-voyager-flx-pct-trail-running-bm7922-100?variant=51853174407442",
+        "price": "₹9,999.00"
+      },
       "myntra": {
         "title": "Columbia Voyager FLX PCT Trail Running",
         "image": "https://assets.myntassets.com/h_200,w_200,c_fill,g_auto/h_1440,q_75,w_1080/v1/assets/images/2025/DECEMBER/30/i1kK4nzH_043d3273629346f890179b100526ecb8.jpg",
@@ -1077,13 +1107,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.8637363910675049,
-          "dinov2_score": 0.9017635583877563,
+          "clip_score": 0.8637362718582153,
+          "visual_score": 0.8637362718582153,
           "title_score": 0.847414,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.890941,
+          "confidence": 0.883727,
           "accepted": true
         }
       }
@@ -1096,9 +1126,19 @@
         "url": "https://www.amazon.in/dp/B0GCT8MZSY",
         "price": "₹12,999.00"
       },
-      "ajio": null,
+      "ajio": {
+        "title": null,
+        "image": null,
+        "url": null,
+        "price": null
+      },
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Men Dark Grey Omni-Max Konos Trillium ATR Trail Running Shoes - UK-6",
+        "image": "https://www.adventuras.in/cdn/shop/files/BM7473-089-1.jpg?v=1772103798&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-men-dark-grey-omni-max-konos-trillium-atr-trail-running-bm7473-089?variant=51853174145298",
+        "price": "₹12,999.00"
+      },
       "myntra": {
         "title": "Columbia Konos Trillium Running Shoes",
         "image": "https://assets.myntassets.com/f_webp,dpr_1.0,q_60,w_210,c_limit,fl_progressive/assets/images/2025/DECEMBER/30/DFki9xfT_3f5fd3837fa54dabbe909fd9689ac6c4.jpg",
@@ -1108,13 +1148,13 @@
       "tatacliq": null,
       "match": {
         "myntra": {
-          "clip_score": 0.9452024698257446,
-          "dinov2_score": 0.9128087759017944,
+          "clip_score": 0.9452028274536133,
+          "visual_score": 0.9452028274536133,
           "title_score": 0.724345,
           "price_score": 1.0,
           "price_status": "no_penalty",
           "price_difference": 0.0,
-          "confidence": 0.915639,
+          "confidence": 0.917526,
           "accepted": true
         }
       }
@@ -1144,7 +1184,12 @@
       },
       "ajio": null,
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Men's White Omni-Wick Hike Polo Shirt - Breathable & Lightweight - S",
+        "image": "https://www.adventuras.in/cdn/shop/files/AJ3614-100-1.jpg?v=1772102665&width=1920",
+        "url": "https://www.adventuras.in/products/columbia-men-white-omni-wick-hike-polo-tshirt-aj3614-100?variant=51853157761298",
+        "price": "₹1,799.00"
+      },
       "myntra": null,
       "tatacliq": null,
       "match": {}
@@ -1172,9 +1217,24 @@
         "url": "https://www.amazon.in/dp/B0DQKSS9XH",
         "price": "₹4,466.00"
       },
-      "ajio": null,
-      "columbia": null,
-      "adventuras": null,
+      "ajio": {
+        "title": null,
+        "image": null,
+        "url": null,
+        "price": null
+      },
+      "columbia": {
+        "title": "Columbia Silver Ridge Men’s Cargo Pant with UPF 50 Sun Protection",
+        "image": "http://www.columbiasportswear.co.in/cdn/shop/files/AE8007-028_1.jpg?v=1743238314",
+        "url": "https://www.columbiasportswear.co.in/products/columbia-mens-grey-omni-shade-silver-ridge-cargo-pant-ae8007-028?_pos=1&_sid=350f4524c&_ss=r&variant=50299517698327",
+        "price": "₹4,499.00"
+      },
+      "adventuras": {
+        "title": "Columbia Silver Ridge Men’s Cargo Pant - UPF 50 Sun Protection",
+        "image": "http://www.adventuras.in/cdn/shop/files/AE8007-028_1.jpg?v=1743050461",
+        "url": "https://www.adventuras.in/products/columbia-men-grey-omni-shade-silver-ridge-cargo-pant-ae8007-028?variant=51117267747090",
+        "price": "₹4,499.00"
+      },
       "myntra": null,
       "tatacliq": null,
       "match": {}
@@ -1217,13 +1277,22 @@
         "url": "https://www.amazon.in/dp/B0B9B96M3F",
         "price": "₹2,999.00"
       },
-      "ajio": null,
+      "ajio": {
+        "title": null,
+        "image": null,
+        "url": null,
+        "price": null
+      },
       "columbia": null,
-      "adventuras": null,
+      "adventuras": {
+        "title": "Columbia Women Navy Blue Fast Trek II Jacket - XS",
+        "image": "https://www.adventuras.in/cdn/shop/files/ER6081-591_1.jpg?v=1744137000&width=1920",
+        "url": "https://www.adventuras.in/products/fast-trek-ii-jacket-er6081-591?_pos=1&_sid=af33c5189&_ss=r&variant=51156044218642",
+        "price": "₹2,599.00"
+      },
       "myntra": null,
       "tatacliq": null,
       "match": {}
     }
-  },
-  "updated_at": "2026-06-23T18:14:12"
+  }
 }

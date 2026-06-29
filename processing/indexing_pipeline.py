@@ -66,30 +66,14 @@ def run_pipeline(step: str = "all") -> dict:
             update_site_status(PIPELINE_SITE, {"success_count": 1})
 
         if step in {"all", "2"}:
-            config = load_config()
-            use_dinov2 = bool(config.get("use_dinov2", False))
-            log_step(
-                logger,
-                2,
-                "Generating Myntra CLIP{} embeddings; building FAISS indexes".format(
-                    " + DINOv2" if use_dinov2 else "",
-                ),
-            )
-            result = build_indexes([AMAZON_PRODUCTS, MYNTRA_PRODUCTS], build_clip=True, build_dinov2=use_dinov2)
+            log_step(logger, 2, "Generating Myntra CLIP embeddings; building FAISS indexes")
+            result = build_indexes([AMAZON_PRODUCTS, MYNTRA_PRODUCTS], build_clip=True, build_dinov2=False)
             summary["myntra_embeddings"] = result["embedded"]
             update_site_status(PIPELINE_SITE, {"success_count": 2})
 
         if step in {"all", "3"}:
-            config = load_config()
-            use_dinov2 = bool(config.get("use_dinov2", False))
-            log_step(
-                logger,
-                3,
-                "Generating Tata CLiQ CLIP{} embeddings; rebuilding FAISS indexes".format(
-                    " + DINOv2" if use_dinov2 else "",
-                ),
-            )
-            result = build_indexes([AMAZON_PRODUCTS, MYNTRA_PRODUCTS, TATACLIQ_PRODUCTS], build_clip=True, build_dinov2=use_dinov2)
+            log_step(logger, 3, "Generating Tata CLiQ CLIP embeddings; rebuilding FAISS indexes")
+            result = build_indexes([AMAZON_PRODUCTS, MYNTRA_PRODUCTS, TATACLIQ_PRODUCTS], build_clip=True, build_dinov2=False)
             summary["tatacliq_embeddings"] = result["embedded"]
             update_site_status(PIPELINE_SITE, {"success_count": 3})
 
@@ -101,7 +85,7 @@ def run_pipeline(step: str = "all") -> dict:
             possible = summary["tuple_count"] * 2
             summary["rejected_count"] = max(0, possible - summary["match_count"])
             update_site_status(PIPELINE_SITE, {"success_count": 4})
-            log_step(logger, 5, "Generated final tuples and exported products.pkl, clip.index, dinov2.index, metadata.pkl")
+            log_step(logger, 5, "Generated final tuples and exported products.pkl, clip.index, metadata.pkl")
 
         log_step(logger, 6, "Indexing pipeline complete")
         mark_stopped(PIPELINE_SITE, "Indexing pipeline complete")

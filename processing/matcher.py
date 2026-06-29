@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .config import load_config
 from .json_store import load_json, product_list, products_by_ean, save_json_atomic
-from .platform_paths import AMAZON_PRODUCTS, CLIP_INDEX, DINOV2_INDEX, FINAL_TUPLES, MARKETPLACE_PRODUCTS, METADATA_PKL, MYNTRA_PRODUCTS, TATACLIQ_PRODUCTS, dated_json_path, log_path
+from .platform_paths import AMAZON_PRODUCTS, CLIP_INDEX, FINAL_TUPLES, MARKETPLACE_PRODUCTS, METADATA_PKL, MYNTRA_PRODUCTS, TATACLIQ_PRODUCTS, dated_json_path, log_path
 from .product_schema import MARKETPLACES, empty_tuple, price_value, product_card
 from .structured_logging import get_scraper_logger, log_event
 import logging
@@ -71,14 +71,12 @@ class VisualScoreLookup:
         self.available = False
         self.by_key: dict[str, int] = {}
         self.clip_index = None
-        self.dino_index = None
         if not (CLIP_INDEX.exists() and METADATA_PKL.exists()):
             return
         try:
             import faiss
 
             self.clip_index = faiss.read_index(str(CLIP_INDEX))
-            self.dino_index = faiss.read_index(str(DINOV2_INDEX)) if DINOV2_INDEX.exists() else None
             with METADATA_PKL.open("rb") as handle:
                 metadata = pickle.load(handle)
             for index, item in enumerate(metadata):
@@ -99,26 +97,18 @@ class VisualScoreLookup:
         clip_score = float(
             self.clip_index.reconstruct(left_pos).dot(self.clip_index.reconstruct(right_pos))
         )
-        if self.dino_index is None:
-            dino_score = clip_score
-        else:
-            dino_score = float(
-                self.dino_index.reconstruct(left_pos).dot(self.dino_index.reconstruct(right_pos))
-            )
-        return max(0.0, clip_score), max(0.0, dino_score)
+        return max(0.0, clip_score), max(0.0, clip_score)
 
 
 def confidence(clip_score: float, dino_score: float, title_score: float, price_score: float, config: dict) -> float:
     weights = {
         "clip": float(config["match_clip_weight"]),
-        "dinov2": float(config["match_dinov2_weight"]),
         "title": float(config["match_title_weight"]),
         "price": float(config["match_price_weight"]),
     }
     total = sum(weights.values()) or 1.0
     score = (
         (weights["clip"] * clip_score)
-        + (weights["dinov2"] * dino_score)
         + (weights["title"] * title_score)
         + (weights["price"] * price_score)
     ) / total
@@ -153,7 +143,7 @@ def best_match(reference: dict, candidates: list[dict], threshold: float, visual
         accepted = score >= threshold and not (bool(config["reject_near_price_mismatch"]) and price_status == "near_rejection")
         meta = {
             "clip_score": clip_score,
-            "dinov2_score": dino_score,
+            "visual_score": dino_score,
             "title_score": title_score,
             "price_score": price_score,
             "price_status": price_status,
@@ -204,7 +194,7 @@ def build_tuples(output: Path = FINAL_TUPLES) -> dict:
     log_event(logger, logging.INFO, "STEP-1", f"loaded existing marketplace tuples: {len(existing_by_ean) if isinstance(existing_by_ean, dict) else 0}")
     log_event(logger, logging.INFO, "STEP-2", f"loaded Myntra candidates with cards/images: {len(myntra_candidates)}")
     log_event(logger, logging.INFO, "STEP-3", f"loaded Tata CLiQ candidates with cards/images: {len(tatacliq_candidates)}")
-    log_event(logger, logging.INFO, "STEP-4", f"visual indexes: {'CLIP+DINOv2' if visual.available and visual.dino_index is not None else 'CLIP only' if visual.available else 'title fallback'}")
+    log_event(logger, logging.INFO, "STEP-4", f"visual indexes: {'CLIP only' if visual.available else 'title fallback'}")
 
     products: dict[str, dict] = {}
     matched = 0
@@ -236,7 +226,7 @@ def build_tuples(output: Path = FINAL_TUPLES) -> dict:
                         ean,
                         (
                             f"{site} candidate #{rank}: confidence={item['confidence']} "
-                            f"clip={item['clip_score']:.4f} dino={item['dinov2_score']:.4f} "
+                            f"clip={item['clip_score']:.4f} visual={item['visual_score']:.4f} "
                             f"title={item['title_score']:.4f} price={item['price_status']} "
                             f"diff={item['price_difference']} accepted={item['accepted']} "
                             f"{site}_product_number={item.get('product_number')}"
@@ -261,7 +251,6 @@ def build_tuples(output: Path = FINAL_TUPLES) -> dict:
             "threshold": threshold,
             "weights": {
                 "clip": float(config["match_clip_weight"]),
-                "dinov2": float(config["match_dinov2_weight"]),
                 "title": float(config["match_title_weight"]),
                 "price": float(config["match_price_weight"]),
             },

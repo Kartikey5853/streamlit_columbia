@@ -12,7 +12,6 @@ DEFAULT_CONFIG = {
     "adventuras_cooldown": 60,
     "match_threshold": 0.82,
     "match_clip_weight": 0.30,
-    "match_dinov2_weight": 0.30,
     "match_title_weight": 0.15,
     "match_price_weight": 0.25,
     "price_no_penalty_diff": 500,
@@ -24,8 +23,6 @@ DEFAULT_CONFIG = {
     "reject_near_price_mismatch": True,
     "image_search_threshold": 0.84,
     "price_refresh_delay_seconds": 1.5,
-    # Set to False to avoid building/loading DINOv2 embeddings (saves GPU memory)
-    "use_dinov2": False,
     "python_executable": "",
 }
 

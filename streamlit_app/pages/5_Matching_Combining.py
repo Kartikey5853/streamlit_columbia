@@ -16,10 +16,10 @@ enable_auto_refresh()
 
 steps = [
     ("1", "Load Amazon + marketplace JSON and generate master_products.pkl"),
-    ("2", "Load Myntra, generate CLIP + DINOv2 embeddings, build FAISS indexes"),
-    ("3", "Load Tata CLiQ, generate CLIP + DINOv2 embeddings, build FAISS indexes"),
-    ("4", "Run Amazon to Myntra/Tata matching with title, CLIP, DINOv2, and price"),
-    ("5", "Generate final tuples and store products.pkl, clip.index, dinov2.index, metadata.pkl, final_tuples.json"),
+    ("2", "Load Myntra, generate CLIP embeddings, build FAISS indexes"),
+    ("3", "Load Tata CLiQ, generate CLIP embeddings, build FAISS indexes"),
+    ("4", "Run Amazon to Myntra/Tata matching with title, CLIP, and price"),
+    ("5", "Generate final tuples and store products.pkl, clip.index, metadata.pkl, final_tuples.json"),
     ("6", "Display progress, logs, match counts, rejected counts, and tuple counts"),
 ]
 

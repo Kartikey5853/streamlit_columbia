@@ -3,14 +3,14 @@ from io import BytesIO
 from zipfile import ZipFile
 from pathlib import Path
 
-from processing.platform_paths import CLIP_INDEX, DINOV2_INDEX, PRODUCTS_PKL, METADATA_PKL, EMBEDDINGS_DIR
+from processing.platform_paths import CLIP_INDEX, PRODUCTS_PKL, METADATA_PKL, EMBEDDINGS_DIR
 
 
 st.title("Export Embeddings and Indexes")
-st.markdown("Download the CLIP/DINO indexes and related metadata used for image search.")
+st.markdown("Download the CLIP index and related metadata used for image search.")
 
 available = []
-for path in (CLIP_INDEX, DINOV2_INDEX, PRODUCTS_PKL, METADATA_PKL):
+for path in (CLIP_INDEX, PRODUCTS_PKL, METADATA_PKL):
     if path.exists():
         available.append(path)
 

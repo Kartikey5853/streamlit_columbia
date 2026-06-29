@@ -28,6 +28,24 @@ SCRAPER_CLASSES = {
 }
 
 
+def _normalize_product_store(payload: object) -> dict:
+    if isinstance(payload, dict):
+        payload.setdefault("schema_version", 1)
+        payload.setdefault("primary_key", "EAN")
+        payload.setdefault("updated_at", None)
+        products = payload.get("products")
+        if not isinstance(products, dict):
+            payload["products"] = {}
+        return payload
+    # Legacy shape support: previous outputs may be list-based.
+    return {
+        "schema_version": 1,
+        "primary_key": "EAN",
+        "updated_at": None,
+        "products": {},
+    }
+
+
 def amazon_card(product: dict) -> dict:
     return {
         "title": product.get("title") or product.get("name"),
@@ -50,21 +68,19 @@ async def scrape_site(site: str, headless: bool, eans: list[str] | None = None, 
     if limit:
         items = items[:limit]
 
-    store = load_json(MARKETPLACE_PRODUCTS, {
+    store = _normalize_product_store(load_json(MARKETPLACE_PRODUCTS, {
         "schema_version": 1,
         "primary_key": "EAN",
         "updated_at": None,
         "products": {},
-    })
-    store.setdefault("products", {})
+    }))
     latest_site_output = Path(os.environ.get("CPI_OUTPUT", latest_json_path(site)))
     dated_site_output = Path(os.environ.get("CPI_DATED_OUTPUT", dated_json_path(site, datetime.now().date().isoformat())))
-    site_payload = load_json(latest_site_output, {
+    site_payload = _normalize_product_store(load_json(latest_site_output, {
         "schema_version": 1,
         "primary_key": "EAN",
         "products": {},
-    })
-    site_payload.setdefault("products", {})
+    }))
 
     scraper = SCRAPER_CLASSES[site]()
     processed = 0

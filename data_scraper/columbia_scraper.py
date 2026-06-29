@@ -12,6 +12,11 @@ from urllib.parse import quote_plus, urljoin
 
 import requests
 
+try:
+    from .marketplace_common import MarketplaceConfig, MarketplaceScraper
+except ImportError:
+    from marketplace_common import MarketplaceConfig, MarketplaceScraper
+
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = BASE_DIR / "columbia_data"
@@ -72,6 +77,65 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
 ]
+
+
+COLUMBIA = MarketplaceConfig(
+    name="columbia",
+    base_url="https://www.columbiasportswear.co.in",
+    search_urls=(
+        "https://www.columbiasportswear.co.in/search?q={query}&type=product",
+        "https://www.columbiasportswear.co.in/search?type=product&q={query}",
+    ),
+    search_input_selectors=(
+        "input[type='search']",
+        "input[name='q']",
+        "input[placeholder*='Search']",
+    ),
+    search_open_selectors=(
+        "button[aria-label*='Search']",
+        "summary[aria-label*='Search']",
+        "details-modal summary",
+    ),
+    search_submit_selectors=(
+        "button[type='submit']",
+        "form[action*='search'] button",
+    ),
+    first_product_selectors=(
+        "a[href*='/products/']",
+        ".card__heading a",
+        ".product-item a",
+    ),
+    title_selectors=(
+        "h1.product__title",
+        "h1.product-single__title",
+        "h1",
+    ),
+    price_selectors=(
+        ".price-item--regular",
+        ".price__regular .price-item",
+        ".price-item",
+        "[class*='price']",
+    ),
+    image_selectors=(
+        ("meta[property='og:image']", "content"),
+        ("img[loading='eager']", "src"),
+        ("img", "src"),
+    ),
+    no_result_markers=(
+        "No results found",
+        "0 results",
+    ),
+    blocked_markers=(
+        "Access denied",
+        "captcha",
+        "verify you are human",
+    ),
+)
+
+
+class ColumbiaScraper(MarketplaceScraper):
+    def __init__(self):
+        super().__init__(COLUMBIA)
 
 
 products_by_id = {}
