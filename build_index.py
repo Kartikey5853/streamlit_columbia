@@ -43,7 +43,7 @@ INDEX_FILE        = EMBEDDINGS_DIR / "embeddings_amazon.index"
 METADATA_FILE     = EMBEDDINGS_DIR / "metadata_amazon.pkl"
 TEXT_INDEX_FILE   = EMBEDDINGS_DIR / "embeddings_amazon_text.index"
 TEXT_METADATA_FILE = EMBEDDINGS_DIR / "metadata_amazon_text.pkl"
-EMBED_BATCH_SIZE  = 32
+EMBED_BATCH_SIZE  = 8
 WATCH_BATCH_SIZE  = 25
 POLL_INTERVAL     = 5.0
 DEVICE            = "cuda"
@@ -72,7 +72,7 @@ def load_model():
     model, _, preprocess = open_clip.create_model_and_transforms(
         "hf-hub:Marqo/marqo-fashionSigLIP"
     )
-    model = model.to(DEVICE).eval()
+    model = model.to(DEVICE).eval().half()
     tokenizer = open_clip.get_tokenizer("hf-hub:Marqo/marqo-fashionSigLIP")
     logger.info("[OK] Model ready.\n")
     return model, preprocess, tokenizer
@@ -92,10 +92,14 @@ def fetch_image(url: str) -> Image.Image | None:
 
 def embed_batch(model, preprocess, images: list) -> np.ndarray:
     tensors = torch.stack([preprocess(img) for img in images]).to(DEVICE)
-    with torch.no_grad():
-        features = model.encode_image(tensors)
-        features = torch.nn.functional.normalize(features, dim=1)
-    return features.cpu().numpy().astype("float32")
+    with torch.inference_mode():
+        with torch.autocast(device_type="cuda", dtype=torch.float16):
+            features = model.encode_image(tensors)
+            features = torch.nn.functional.normalize(features, dim=1)
+    result = features.cpu().numpy().astype("float32")
+    del tensors, features
+    torch.cuda.empty_cache()
+    return result
 
 
 def embed_text_batch(model, tokenizer, texts: list[str]) -> np.ndarray:

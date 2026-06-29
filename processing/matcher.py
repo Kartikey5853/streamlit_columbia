@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .config import load_config
 from .json_store import load_json, product_list, products_by_ean, save_json_atomic
-from .platform_paths import AMAZON_PRODUCTS, CLIP_INDEX, FINAL_TUPLES, MARKETPLACE_PRODUCTS, METADATA_PKL, MYNTRA_PRODUCTS, TATACLIQ_PRODUCTS, dated_json_path, log_path
+from .platform_paths import AMAZON_PRODUCTS, CLIP_INDEX, FINAL_TUPLES, MARKETPLACE_PRODUCTS, METADATA_PKL, MYNTRA_PRODUCTS, TATACLIQ_PRODUCTS, current_json_path, dated_json_path, log_path
 from .product_schema import MARKETPLACES, empty_tuple, price_value, product_card
 from .structured_logging import get_scraper_logger, log_event
 import logging
@@ -187,13 +187,15 @@ def build_tuples(output: Path = FINAL_TUPLES) -> dict:
     amazon_products = products_by_ean(load_json(AMAZON_PRODUCTS, {}))
     marketplace = load_json(MARKETPLACE_PRODUCTS, {"products": {}})
     existing_by_ean = marketplace.get("products", {}) if isinstance(marketplace, dict) else {}
-    myntra_candidates = normalized_candidates(load_json(MYNTRA_PRODUCTS, []))
-    tatacliq_candidates = normalized_candidates(load_json(TATACLIQ_PRODUCTS, []))
+    myntra_source = current_json_path("myntra")
+    tatacliq_source = current_json_path("tatacliq")
+    myntra_candidates = normalized_candidates(load_json(myntra_source, []))
+    tatacliq_candidates = normalized_candidates(load_json(tatacliq_source, []))
     visual = VisualScoreLookup()
     log_event(logger, logging.INFO, "STEP-1", f"loaded Amazon products: {len(amazon_products)}")
     log_event(logger, logging.INFO, "STEP-1", f"loaded existing marketplace tuples: {len(existing_by_ean) if isinstance(existing_by_ean, dict) else 0}")
-    log_event(logger, logging.INFO, "STEP-2", f"loaded Myntra candidates with cards/images: {len(myntra_candidates)}")
-    log_event(logger, logging.INFO, "STEP-3", f"loaded Tata CLiQ candidates with cards/images: {len(tatacliq_candidates)}")
+    log_event(logger, logging.INFO, "STEP-2", f"loaded Myntra candidates from {myntra_source.name}: {len(myntra_candidates)}")
+    log_event(logger, logging.INFO, "STEP-3", f"loaded Tata CLiQ candidates from {tatacliq_source.name}: {len(tatacliq_candidates)}")
     log_event(logger, logging.INFO, "STEP-4", f"visual indexes: {'CLIP only' if visual.available else 'title fallback'}")
 
     products: dict[str, dict] = {}

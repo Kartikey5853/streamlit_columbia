@@ -29,7 +29,7 @@ MYNTRA_INDEX_FILE = EMBEDDINGS_DIR / "embeddings_myntra.index"
 MYNTRA_METADATA_FILE = EMBEDDINGS_DIR / "metadata_myntra.pkl"
 
 MODEL_NAME = "hf-hub:Marqo/marqo-fashionSigLIP"
-BATCH_SIZE = 32
+BATCH_SIZE = 8
 
 logger = logging.getLogger("myntra-merge")
 
@@ -139,15 +139,27 @@ def load_model():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info("Loading %s on %s", MODEL_NAME, device)
     model, _, preprocess = open_clip.create_model_and_transforms(MODEL_NAME)
-    return model.to(device).eval(), preprocess, device
+    model = model.to(device).eval()
+    if device == "cuda":
+        model = model.half()
+    return model, preprocess, device
 
 
 def embed_images(model, preprocess, device: str, images: list[Image.Image]) -> np.ndarray:
     tensors = torch.stack([preprocess(image) for image in images]).to(device)
-    with torch.no_grad():
-        features = model.encode_image(tensors)
-        features = torch.nn.functional.normalize(features, dim=1)
-    return features.cpu().numpy().astype("float32")
+    with torch.inference_mode():
+        if device == "cuda":
+            with torch.autocast(device_type="cuda", dtype=torch.float16):
+                features = model.encode_image(tensors)
+                features = torch.nn.functional.normalize(features, dim=1)
+        else:
+            features = model.encode_image(tensors)
+            features = torch.nn.functional.normalize(features, dim=1)
+    result = features.cpu().numpy().astype("float32")
+    del tensors, features
+    if device == "cuda":
+        torch.cuda.empty_cache()
+    return result
 
 
 def metadata_for(product: dict, source: str) -> dict:

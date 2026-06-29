@@ -17,6 +17,7 @@ from .platform_paths import (
     MASTER_PRODUCTS_PKL,
     MYNTRA_PRODUCTS,
     TATACLIQ_PRODUCTS,
+    current_json_path,
     dated_log_path,
     log_path,
 )
@@ -67,13 +68,13 @@ def run_pipeline(step: str = "all") -> dict:
 
         if step in {"all", "2"}:
             log_step(logger, 2, "Generating Myntra CLIP embeddings; building FAISS indexes")
-            result = build_indexes([AMAZON_PRODUCTS, MYNTRA_PRODUCTS], build_clip=True, build_dinov2=False)
+            result = build_indexes([AMAZON_PRODUCTS, current_json_path("myntra")], build_clip=True, build_dinov2=False)
             summary["myntra_embeddings"] = result["embedded"]
             update_site_status(PIPELINE_SITE, {"success_count": 2})
 
         if step in {"all", "3"}:
             log_step(logger, 3, "Generating Tata CLiQ CLIP embeddings; rebuilding FAISS indexes")
-            result = build_indexes([AMAZON_PRODUCTS, MYNTRA_PRODUCTS, TATACLIQ_PRODUCTS], build_clip=True, build_dinov2=False)
+            result = build_indexes([AMAZON_PRODUCTS, current_json_path("myntra"), current_json_path("tatacliq")], build_clip=True, build_dinov2=False)
             summary["tatacliq_embeddings"] = result["embedded"]
             update_site_status(PIPELINE_SITE, {"success_count": 3})
 

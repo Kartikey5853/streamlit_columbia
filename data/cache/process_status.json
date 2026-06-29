@@ -1,15 +1,15 @@
 {
   "matcher": {
-    "running": false,
-    "pid": null,
+    "running": true,
+    "pid": 15416,
     "child_pid": null,
-    "current_ean": null,
-    "success_count": 4,
+    "current_ean": "STEP-3",
+    "success_count": 0,
     "failure_count": 0,
     "warning_count": 0,
-    "started_at": "2026-06-29T21:41:30",
-    "updated_at": "2026-06-29T21:54:20",
-    "message": "Indexing pipeline complete"
+    "started_at": "2026-06-30T01:55:18",
+    "updated_at": "2026-06-30T01:55:19",
+    "message": "Generating Tata CLiQ CLIP embeddings; rebuilding FAISS indexes"
   },
   "ajio": {
     "running": false,

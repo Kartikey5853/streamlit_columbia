@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import pickle
 from io import BytesIO
 from pathlib import Path
@@ -12,6 +13,9 @@ from PIL import Image
 from .json_store import load_json, product_list
 from .platform_paths import CLIP_INDEX, EMBEDDINGS_DIR, METADATA_PKL, PRODUCTS_PKL
 from .product_schema import price_value
+
+
+logger = logging.getLogger("embedding_builder")
 
 
 def fetch_image(url: str) -> Image.Image | None:
@@ -35,16 +39,33 @@ def load_clip():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, _, preprocess = open_clip.create_model_and_transforms("hf-hub:Marqo/marqo-fashionSigLIP")
-    return model.to(device).eval(), preprocess, device, torch
+    model = model.to(device).eval()
+    if device == "cuda":
+        model = model.half()
+    return model, preprocess, device, torch
 
 
-def embed_clip(images: list[Image.Image]) -> np.ndarray:
+def embed_clip(images: list[Image.Image], batch_size: int = 8) -> np.ndarray:
     model, preprocess, device, torch = load_clip()
-    tensors = torch.stack([preprocess(image) for image in images]).to(device)
-    with torch.no_grad():
-        features = model.encode_image(tensors)
-        features = torch.nn.functional.normalize(features, dim=1)
-    return features.cpu().numpy().astype("float32")
+    vectors: list[np.ndarray] = []
+    for start in range(0, len(images), max(1, batch_size)):
+        batch = images[start:start + batch_size]
+        tensors = torch.stack([preprocess(image) for image in batch]).to(device)
+        with torch.inference_mode():
+            if device == "cuda":
+                with torch.autocast(device_type="cuda", dtype=torch.float16):
+                    features = model.encode_image(tensors)
+                    features = torch.nn.functional.normalize(features, dim=1)
+            else:
+                features = model.encode_image(tensors)
+                features = torch.nn.functional.normalize(features, dim=1)
+        vectors.append(features.cpu().numpy().astype("float32"))
+        del tensors, features
+        if device == "cuda":
+            torch.cuda.empty_cache()
+    if not vectors:
+        return np.empty((0, 0), dtype="float32")
+    return np.vstack(vectors).astype("float32")
 
 
 def product_image(product: dict) -> str | None:
@@ -97,23 +118,50 @@ def build_indexes(inputs: list[Path], build_clip: bool = True, build_dinov2: boo
 
     EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
     products, metadata = collect_products(inputs)
-    images = []
     kept_products = []
     kept_metadata = []
+    clip_index = None
+    batch_images: list[Image.Image] = []
+    batch_products: list[dict] = []
+    batch_metadata: list[dict] = []
+
+    def flush_batch() -> None:
+        nonlocal clip_index
+        if not batch_images:
+            return
+        if build_clip:
+            clip_vectors = embed_clip(batch_images)
+            if clip_vectors.size == 0:
+                batch_images.clear()
+                batch_products.clear()
+                batch_metadata.clear()
+                return
+            if clip_index is None:
+                clip_index = faiss.IndexFlatIP(clip_vectors.shape[1])
+            clip_index.add(clip_vectors)
+        kept_products.extend(batch_products)
+        kept_metadata.extend(batch_metadata)
+        batch_images.clear()
+        batch_products.clear()
+        batch_metadata.clear()
+
     for product, meta in zip(products, metadata):
         image = fetch_image(meta.get("image"))
         if image is None:
             continue
-        images.append(image)
-        kept_products.append(product)
-        kept_metadata.append(meta)
-    if not images:
+        batch_images.append(image)
+        batch_products.append(product)
+        batch_metadata.append(meta)
+        if len(batch_images) >= 8:
+            flush_batch()
+
+    flush_batch()
+    if not kept_metadata:
         raise RuntimeError("No product images could be downloaded for embeddings.")
 
     if build_clip:
-        clip_vectors = embed_clip(images)
-        clip_index = faiss.IndexFlatIP(clip_vectors.shape[1])
-        clip_index.add(clip_vectors)
+        if clip_index is None:
+            raise RuntimeError("No CLIP vectors were generated for embeddings.")
         faiss.write_index(clip_index, str(CLIP_INDEX))
     with PRODUCTS_PKL.open("wb") as handle:
         pickle.dump(kept_products, handle)

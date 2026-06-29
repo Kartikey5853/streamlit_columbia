@@ -78,4 +78,16 @@ def dated_json_path(site: str, date_string: str) -> Path:
     return JSON_DIR / site / f"{site}_{date_string}.json"
 
 
+def current_json_path(site: str) -> Path:
+    latest = latest_json_path(site)
+    if latest.exists() and latest.stat().st_size > 0:
+        return latest
+    canonical = {
+        "amazon": AMAZON_PRODUCTS,
+        "myntra": MYNTRA_PRODUCTS,
+        "tatacliq": TATACLIQ_PRODUCTS,
+    }.get(site)
+    return canonical or latest
+
+
 ensure_directories()
