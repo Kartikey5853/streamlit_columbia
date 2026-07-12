@@ -23,6 +23,7 @@ from .json_store import load_json, product_list, products_by_ean, save_json_atom
 from .platform_paths import (
     AMAZON_PRODUCTS,
     CLIP_INDEX,
+    EMBEDDING_CACHE_PKL,
     FINAL_TUPLES,
     FINAL_TUPLES_MANIFEST,
     MARKETPLACE_PRODUCTS,
@@ -38,9 +39,8 @@ from .structured_logging import get_scraper_logger, log_event
 
 logger = logging.getLogger("catalog_engine")
 
-TARGET_VISUAL_SITES = ("myntra", "tatacliq")
 DIRECT_EAN_SITES = ("ajio", "columbia", "adventuras")
-MATCH_SITES = (*DIRECT_EAN_SITES, *TARGET_VISUAL_SITES)
+MATCH_SITES = MARKETPLACES
 MODEL_NAME = "hf-hub:Marqo/marqo-fashionSigLIP"
 
 _THREAD_LOCAL = threading.local()
@@ -50,6 +50,8 @@ _THREAD_LOCAL = threading.local()
 class IndexedRecord:
     site: str
     key: str | None
+    product_id: str | None
+    dataset_index: int
     title: str | None
     price: object
     url: str | None
@@ -165,7 +167,15 @@ def _match_key(product: dict) -> str | None:
     return None
 
 
-def _record_for_product(product: dict, site: str) -> IndexedRecord | None:
+def _product_id(product: dict) -> str | None:
+    for key in ("product_id", "productId", "id", "sku", "upc", "ean", "url", "link"):
+        value = product.get(key)
+        if value:
+            return str(value)
+    return None
+
+
+def _record_for_product(product: dict, site: str, dataset_index: int) -> IndexedRecord | None:
     image = product.get("image") or product.get("image_url")
     title = product.get("title") or product.get("name")
     if not image or not title:
@@ -173,6 +183,8 @@ def _record_for_product(product: dict, site: str) -> IndexedRecord | None:
     return IndexedRecord(
         site=site,
         key=_match_key(product),
+        product_id=_product_id(product),
+        dataset_index=dataset_index,
         title=str(title),
         price=product.get("price"),
         url=str(product.get("url") or product.get("link") or "") or None,
@@ -187,8 +199,8 @@ def collect_visual_records(paths: Iterable[Path]) -> list[IndexedRecord]:
     for path in paths:
         payload = load_json(path, {})
         site = path.parent.name
-        for product in product_list(payload):
-            record = _record_for_product(product, site)
+        for idx, product in enumerate(product_list(payload)):
+            record = _record_for_product(product, site, idx)
             if record is not None:
                 records.append(record)
     return records
@@ -252,6 +264,23 @@ def _save_index(index, metadata: list[dict], index_path: Path, metadata_path: Pa
         pickle.dump(metadata, handle)
 
 
+def _load_embedding_cache(path: Path = EMBEDDING_CACHE_PKL) -> dict[str, dict]:
+    if not path.exists():
+        return {}
+    try:
+        with path.open("rb") as handle:
+            cache = pickle.load(handle)
+        return cache if isinstance(cache, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_embedding_cache(cache: dict[str, dict], path: Path = EMBEDDING_CACHE_PKL) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("wb") as handle:
+        pickle.dump(cache, handle)
+
+
 def build_visual_index(
     inputs: Iterable[Path],
     *,
@@ -271,61 +300,106 @@ def build_visual_index(
     download_workers = max(1, int(download_workers or config.get("image_download_workers", 8)))
     chunk_size = max(batch_size, int(chunk_size or config.get("visual_index_chunk_size", batch_size * 8)))
 
-    manifest = load_manifest(manifest_path)
-    if output_index.exists() and output_metadata.exists() and manifest_matches(manifest, input_paths):
-        metadata = load_visual_index(output_index, output_metadata)[1]
-        return {
-            "embedded": len(metadata),
-            "download_failures": 0,
-            "cached": True,
-            "index_path": str(output_index),
-            "metadata_path": str(output_metadata),
-        }
-
     records = collect_visual_records(input_paths)
     if not records:
         raise RuntimeError("No embeddable products were found in the visual sources.")
 
-    model, preprocess, device, torch_module = _load_clip_model()
-    clip_index = None
-    metadata: list[dict] = []
+    manifest = load_manifest(manifest_path)
+    embedding_cache = _load_embedding_cache()
+
+    images_in_records = {str(record.image) for record in records if record.image}
+    missing_images = [image for image in images_in_records if image not in embedding_cache]
+
+    if output_index.exists() and output_metadata.exists() and manifest_matches(manifest, input_paths) and not missing_images:
+        metadata = load_visual_index(output_index, output_metadata)[1]
+        return {
+            "embedded": len(metadata),
+            "new_embeddings": 0,
+            "download_failures": 0,
+            "cached": True,
+            "index_path": str(output_index),
+            "metadata_path": str(output_metadata),
+            "cache_path": str(EMBEDDING_CACHE_PKL),
+        }
+
     download_failures = 0
 
-    with ThreadPoolExecutor(max_workers=download_workers) as pool:
-        for chunk in _chunked(records, chunk_size):
-            images = list(pool.map(lambda record: _download_image(record.image or ""), chunk))
+    if missing_images:
+        model, preprocess, device, torch_module = _load_clip_model()
+        with ThreadPoolExecutor(max_workers=download_workers) as pool:
+            for start in range(0, len(missing_images), chunk_size):
+                image_urls = missing_images[start:start + chunk_size]
+                downloaded = list(pool.map(_download_image, image_urls))
+                batch_images: list[Image.Image] = []
+                batch_urls: list[str] = []
+                for image_url, image in zip(image_urls, downloaded):
+                    if image is None:
+                        download_failures += 1
+                        continue
+                    batch_images.append(image)
+                    batch_urls.append(image_url)
+                    if len(batch_images) >= batch_size:
+                        vectors = _embed_images(batch_images, model, preprocess, device, torch_module)
+                        for vector, url in zip(vectors, batch_urls):
+                            embedding_cache[url] = {
+                                "vector": vector,
+                                "dimension": int(vector.shape[0]),
+                                "updated_at": datetime.now().isoformat(timespec="seconds"),
+                            }
+                        batch_images.clear()
+                        batch_urls.clear()
 
-            batch_images: list[Image.Image] = []
-            batch_metadata: list[dict] = []
-            for record, image in zip(chunk, images):
-                if image is None:
-                    download_failures += 1
-                    continue
-                batch_images.append(image)
-                batch_metadata.append({
-                    "site": record.site,
-                    "key": record.key,
-                    "title": record.title,
-                    "price": record.price,
-                    "price_value": record.price_value,
-                    "url": record.url,
-                    "image": record.image,
-                })
-                if len(batch_images) >= batch_size:
+                if batch_images:
                     vectors = _embed_images(batch_images, model, preprocess, device, torch_module)
-                    if clip_index is None:
-                        clip_index = faiss.IndexFlatIP(vectors.shape[1])
-                    clip_index.add(vectors)
-                    metadata.extend(batch_metadata)
-                    batch_images.clear()
-                    batch_metadata.clear()
+                    for vector, url in zip(vectors, batch_urls):
+                        embedding_cache[url] = {
+                            "vector": vector,
+                            "dimension": int(vector.shape[0]),
+                            "updated_at": datetime.now().isoformat(timespec="seconds"),
+                        }
 
-            if batch_images:
-                vectors = _embed_images(batch_images, model, preprocess, device, torch_module)
-                if clip_index is None:
-                    clip_index = faiss.IndexFlatIP(vectors.shape[1])
-                clip_index.add(vectors)
-                metadata.extend(batch_metadata)
+        _save_embedding_cache(embedding_cache)
+
+    clip_index = None
+    metadata: list[dict] = []
+    vector_batch: list[np.ndarray] = []
+
+    for record in records:
+        if not record.image:
+            continue
+        cached = embedding_cache.get(str(record.image))
+        if not isinstance(cached, dict):
+            continue
+        vector = cached.get("vector")
+        if vector is None:
+            continue
+        vector_np = np.asarray(vector, dtype="float32")
+        if vector_np.ndim != 1 or vector_np.size == 0:
+            continue
+        vector_batch.append(vector_np)
+        metadata.append({
+            "site": record.site,
+            "key": record.key,
+            "product_id": record.product_id,
+            "dataset_index": record.dataset_index,
+            "title": record.title,
+            "price": record.price,
+            "price_value": record.price_value,
+            "url": record.url,
+            "image": record.image,
+        })
+        if len(vector_batch) >= chunk_size:
+            stacked = np.stack(vector_batch).astype("float32")
+            if clip_index is None:
+                clip_index = faiss.IndexFlatIP(stacked.shape[1])
+            clip_index.add(stacked)
+            vector_batch.clear()
+
+    if vector_batch:
+        stacked = np.stack(vector_batch).astype("float32")
+        if clip_index is None:
+            clip_index = faiss.IndexFlatIP(stacked.shape[1])
+        clip_index.add(stacked)
 
     if clip_index is None or not metadata:
         raise RuntimeError("No CLIP vectors were generated for the visual index.")
@@ -336,14 +410,18 @@ def build_visual_index(
         "index_path": str(output_index),
         "metadata_path": str(output_metadata),
         "embedded": len(metadata),
+        "new_embeddings": len(missing_images),
+        "cache_path": str(EMBEDDING_CACHE_PKL),
         "updated_at": datetime.now().isoformat(timespec="seconds"),
     })
     return {
         "embedded": len(metadata),
+        "new_embeddings": len(missing_images),
         "download_failures": download_failures,
         "cached": False,
         "index_path": str(output_index),
         "metadata_path": str(output_metadata),
+        "cache_path": str(EMBEDDING_CACHE_PKL),
     }
 
 
@@ -412,18 +490,39 @@ def _score_candidate(reference: dict, candidate: dict, config: dict) -> dict:
 
 def match_reference_to_targets(
     reference: dict,
+    reference_site: str | None,
     index,
     metadata: list[dict],
     config: dict,
     top_k: int,
+    embedding_cache: dict[str, dict] | None = None,
 ) -> tuple[dict[str, dict], list[dict]]:
     image = reference.get("image") or reference.get("image_url")
     if not image:
         return {}, []
-    image_result = _download_image(image)
-    if image_result is None:
-        return {}, []
-    vector = embed_image(image_result)
+
+    vector = None
+    if embedding_cache is not None:
+        cached = embedding_cache.get(str(image))
+        if isinstance(cached, dict):
+            cached_vector = cached.get("vector")
+            if cached_vector is not None:
+                candidate = np.asarray(cached_vector, dtype="float32")
+                if candidate.ndim == 1 and candidate.size > 0:
+                    vector = candidate.reshape(1, -1)
+
+    if vector is None:
+        image_result = _download_image(str(image))
+        if image_result is None:
+            return {}, []
+        vector = embed_image(image_result)
+        if embedding_cache is not None:
+            embedding_cache[str(image)] = {
+                "vector": np.asarray(vector[0], dtype="float32"),
+                "dimension": int(vector.shape[1]),
+                "updated_at": datetime.now().isoformat(timespec="seconds"),
+            }
+
     count = min(max(1, top_k), index.ntotal)
     scores, positions = index.search(vector.astype("float32"), count)
     scored: list[dict] = []
@@ -432,7 +531,10 @@ def match_reference_to_targets(
         if position < 0 or position >= len(metadata):
             continue
         candidate = metadata[int(position)]
-        if candidate.get("site") not in TARGET_VISUAL_SITES:
+        candidate_site = str(candidate.get("site") or "")
+        if not candidate_site:
+            continue
+        if reference_site and candidate_site == reference_site:
             continue
         candidate_with_score = {
             **candidate,
@@ -465,6 +567,52 @@ def _normalize_marketplace_row(row: dict | None, ean: str, include_target_sites:
     return normalized
 
 
+def _copy_card(card: dict | None) -> dict | None:
+    return dict(card) if isinstance(card, dict) else None
+
+
+def _today_iso() -> str:
+    return datetime.now().date().isoformat()
+
+
+def _merge_status(existing: dict | None) -> dict:
+    base = {
+        site: {"available": False, "last_seen": None}
+        for site in MARKETPLACES
+    }
+    if isinstance(existing, dict):
+        for site in MARKETPLACES:
+            value = existing.get(site)
+            if isinstance(value, dict):
+                base[site] = {
+                    "available": bool(value.get("available", False)),
+                    "last_seen": value.get("last_seen"),
+                }
+    return base
+
+
+def _merge_history(existing: dict | None) -> dict:
+    base: dict[str, list[dict]] = {site: [] for site in MARKETPLACES}
+    if isinstance(existing, dict):
+        for site in MARKETPLACES:
+            entries = existing.get(site)
+            if isinstance(entries, list):
+                base[site] = [entry for entry in entries if isinstance(entry, dict)]
+    return base
+
+
+def _append_history(history: dict, site: str, date_string: str, price: object, available: bool) -> None:
+    entries = history.setdefault(site, [])
+    record = {
+        "date": date_string,
+        "price": price,
+        "availability": bool(available),
+    }
+    if entries and entries[-1] == record:
+        return
+    entries.append(record)
+
+
 def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
     config = load_config()
     threshold = float(config["match_threshold"])
@@ -472,18 +620,35 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
     source_paths = [
         AMAZON_PRODUCTS,
         MARKETPLACE_PRODUCTS,
-        current_json_path("myntra"),
-        current_json_path("tatacliq"),
+        *(current_json_path(site) for site in MARKETPLACES),
     ]
     if output.resolve() == FINAL_TUPLES.resolve() and output.exists() and manifest_matches(load_manifest(manifest_path), source_paths):
         return load_json(output, {"products": {}, "summary": {}})
 
     logger = get_scraper_logger("matcher", log_path("matcher"))
+    started_total = datetime.now()
     amazon_products = products_by_ean(load_json(AMAZON_PRODUCTS, {}))
     marketplace_store = load_marketplace_store(MARKETPLACE_PRODUCTS)
-    target_sources = [current_json_path("myntra"), current_json_path("tatacliq")]
+    previous_payload = load_json(output, {"products": {}}) if output.exists() else {"products": {}}
+    previous_products = previous_payload.get("products", {}) if isinstance(previous_payload, dict) else {}
+    target_sources = [current_json_path(site) for site in MARKETPLACES]
+    embedding_cache = _load_embedding_cache()
+
+    log_event(logger, logging.INFO, "STEP-2A", f"START building/loading visual index from {[path.name for path in target_sources]}")
     build_result = build_visual_index(target_sources)
+    log_event(
+        logger,
+        logging.INFO,
+        "STEP-2A",
+        (
+            f"DONE visual index ready; embedded={build_result.get('embedded', 0)} "
+            f"cached={bool(build_result.get('cached'))} download_failures={build_result.get('download_failures', 0)}"
+        ),
+    )
+
+    log_event(logger, logging.INFO, "STEP-2B", "START loading visual index + metadata into matcher")
     index, metadata = load_visual_index()
+    log_event(logger, logging.INFO, "STEP-2B", f"DONE loaded index vectors={index.ntotal} metadata={len(metadata)}")
     direct_sources = {
         site: products_by_ean(load_json(current_json_path(site), {}))
         for site in DIRECT_EAN_SITES
@@ -498,12 +663,37 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
     products: dict[str, dict] = {}
     accepted_matches = 0
     match_top_k = max(1, int(config.get("visual_match_top_k", 12)))
+    scrape_date = _today_iso()
 
-    for ean in all_eans:
-        row = _normalize_marketplace_row(existing_by_ean.get(ean), ean, include_target_sites=False)
-        row["amazon"] = product_card(amazon_products.get(ean))
+    log_event(logger, logging.INFO, "STEP-2C", f"START tuple assembly for total_eans={len(all_eans)}")
+
+    for index_pos, ean in enumerate(all_eans, start=1):
+        existing_marketplace_row = existing_by_ean.get(ean)
+        previous_row = previous_products.get(ean) if isinstance(previous_products, dict) else None
+
+        row = _normalize_marketplace_row(existing_marketplace_row, ean, include_target_sites=True)
+        if isinstance(previous_row, dict):
+            for site in MATCH_SITES:
+                if row.get(site) is None:
+                    row[site] = _copy_card(product_card(previous_row.get(site)))
+
+        status = _merge_status(previous_row.get("status") if isinstance(previous_row, dict) else None)
+        history = _merge_history(previous_row.get("history") if isinstance(previous_row, dict) else None)
+
+        amazon_card = product_card(amazon_products.get(ean))
+        if amazon_card:
+            row["amazon"] = amazon_card
+            status["amazon"] = {"available": True, "last_seen": scrape_date}
+        elif row.get("amazon"):
+            status["amazon"]["available"] = False
+
         for site, source in direct_sources.items():
-            row[site] = product_card(source.get(ean))
+            source_card = product_card(source.get(ean))
+            if source_card:
+                row[site] = source_card
+                status[site] = {"available": True, "last_seen": scrape_date}
+            elif row.get(site):
+                status[site]["available"] = False
 
         match_meta: dict[str, dict] = {}
         reference_site = None
@@ -516,19 +706,28 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
                 break
 
         if reference is not None:
-            log_event(logger, logging.INFO, ean, f"matching reference={reference_site}; targets myntra/tatacliq")
-            best_by_site, scored = match_reference_to_targets(reference, index, metadata, config, match_top_k)
-            for site in TARGET_VISUAL_SITES:
-                if row.get(site):
-                    log_event(logger, logging.INFO, ean, f"{site} already present; keeping direct row")
-                    continue
+            query_sites = [site for site in MATCH_SITES if site != reference_site]
+            log_event(logger, logging.INFO, ean, f"matching reference={reference_site}; faiss candidates grouped by platform")
+            best_by_site, scored = match_reference_to_targets(
+                reference,
+                reference_site,
+                index,
+                metadata,
+                config,
+                match_top_k,
+                embedding_cache,
+            )
+            for site in query_sites:
                 match = best_by_site.get(site)
                 if match:
                     row[site] = match["card"]
                     match_meta[site] = match["meta"]
+                    status[site] = {"available": True, "last_seen": scrape_date}
                     accepted_matches += 1
                     log_event(logger, logging.INFO, ean, f"{site} accepted with confidence={match['meta']['confidence']}")
                 else:
+                    if row.get(site):
+                        status[site]["available"] = False
                     log_event(logger, logging.WARNING, ean, f"{site} no candidate met threshold={threshold}")
             for rank, item in enumerate(scored[:5], start=1):
                 log_event(
@@ -543,10 +742,21 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
                 )
         else:
             log_event(logger, logging.WARNING, ean, "no reference card available; tuple created from EAN only")
+            for site in MATCH_SITES:
+                if row.get(site):
+                    status[site]["available"] = False
 
         row["match"] = {site: meta for site, meta in match_meta.items() if meta}
+        row["status"] = status
+        for site in MARKETPLACES:
+            card = row.get(site)
+            card_price = card.get("price") if isinstance(card, dict) else None
+            _append_history(history, site, scrape_date, card_price, bool(status.get(site, {}).get("available")))
+        row["history"] = history
         products[ean] = row
         log_event(logger, logging.INFO, ean, f"tuple built; matched sites: {sum(1 for site in MATCH_SITES if row.get(site))}")
+        if index_pos % 100 == 0:
+            log_event(logger, logging.INFO, "STEP-2C", f"PROGRESS tuples_built={index_pos}/{len(all_eans)}")
 
     payload = {
         "schema_version": 1,
@@ -575,6 +785,7 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
         "products": products,
     }
     save_json_atomic(output, payload)
+    _save_embedding_cache(embedding_cache)
     if output.resolve() == FINAL_TUPLES.resolve():
         save_json_atomic(dated_json_path("combined", datetime.now().date().isoformat()), payload)
         save_manifest(manifest_path, {
@@ -583,6 +794,16 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
             "updated_at": datetime.now().isoformat(timespec="seconds"),
             "summary": payload["summary"],
         })
+    elapsed = (datetime.now() - started_total).total_seconds()
+    log_event(
+        logger,
+        logging.INFO,
+        "STEP-2D",
+        (
+            f"DONE tuple assembly in {elapsed:.2f}s; tuples={payload['summary']['tuples']} "
+            f"accepted_cross_market_matches={payload['summary']['accepted_cross_market_matches']}"
+        ),
+    )
     return payload
 
 
@@ -640,6 +861,63 @@ def search_tuple_matches(image_path: Path, top_k: int = 5, minimum_similarity: f
     return {
         "query_image": str(image_path.resolve()),
         "matches": matches,
+    }
+
+
+def search_tuple_matches_batch(image_paths: list[Path], top_k: int = 5, minimum_similarity: float = 0.0) -> dict:
+    if len(image_paths) > 50:
+        raise ValueError("Batch image search supports up to 50 images.")
+
+    index, metadata = load_visual_index()
+    payload = load_json(FINAL_TUPLES, {"products": {}})
+    lookup = build_tuple_lookup(payload)
+
+    results: list[dict] = []
+    for image_path in image_paths:
+        image = Image.open(image_path).convert("RGB")
+        vector = embed_image(image)
+        count = min(max(1, top_k), index.ntotal)
+        scores, positions = index.search(vector.astype("float32"), count)
+
+        image_matches: list[dict] = []
+        for score, position in zip(scores[0], positions[0]):
+            if position < 0 or position >= len(metadata):
+                continue
+            candidate = metadata[int(position)]
+            similarity = float(score)
+            if similarity < minimum_similarity:
+                continue
+            ean, row = None, None
+            site = str(candidate.get("site") or "")
+            for key in (candidate.get("url"), candidate.get("product_id"), candidate.get("title")):
+                if not key:
+                    continue
+                found = lookup.get((site, str(key)))
+                if found:
+                    ean, row = found
+                    break
+            if not ean or not row:
+                continue
+            image_matches.append({
+                "EAN": ean,
+                "site": site,
+                "confidence": round(similarity, 6),
+                "tuple": row,
+            })
+
+        top_match = image_matches[0] if image_matches else None
+        results.append({
+            "filename": image_path.name,
+            "query_image": str(image_path.resolve()),
+            "matched_ean": top_match.get("EAN") if top_match else None,
+            "confidence": top_match.get("confidence") if top_match else None,
+            "tuple": top_match.get("tuple") if top_match else None,
+            "matches": image_matches,
+        })
+
+    return {
+        "count": len(results),
+        "results": results,
     }
 
 

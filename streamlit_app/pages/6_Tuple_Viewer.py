@@ -1,6 +1,9 @@
-import streamlit as st
+from __future__ import annotations
+
 import sys
 from pathlib import Path
+
+import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -10,26 +13,95 @@ from processing.platform_paths import FINAL_TUPLES
 from processing.product_schema import MARKETPLACES
 from streamlit_app.ui_common import read_json
 
-st.title("Tuple Viewer")
-ean = st.text_input("EAN")
-payload = read_json(FINAL_TUPLES, {"products": {}})
-row = payload.get("products", {}).get(ean) if ean else None
 
-if ean and not row:
-    st.warning("No tuple found for this EAN.")
-elif row:
+def _card_value(card: dict | None, key: str) -> str:
+    if not isinstance(card, dict):
+        return "-"
+    value = card.get(key)
+    if value is None or str(value).strip() == "":
+        return "-"
+    return str(value)
+
+
+def _flatten_row(ean: str, row: dict) -> dict:
+    amazon = row.get("amazon") if isinstance(row, dict) else None
+    flat = {
+        "Amazon Image": _card_value(amazon, "image"),
+        "EAN": ean,
+        "Amazon Price": _card_value(amazon, "price"),
+    }
+
+    price_headers = {
+        "ajio": "AJIO Price",
+        "columbia": "Columbia Price",
+        "adventuras": "Adventure Price",
+        "myntra": "Myntra Price",
+        "tatacliq": "TataCliQ Price",
+    }
+    for site, header in price_headers.items():
+        flat[header] = _card_value(row.get(site) if isinstance(row, dict) else None, "price")
+
+    labels = {
+        "amazon": "Amazon",
+        "ajio": "AJIO",
+        "columbia": "Columbia",
+        "adventuras": "Adventure",
+        "myntra": "Myntra",
+        "tatacliq": "TataCliQ",
+    }
     for site in MARKETPLACES:
-        card = row.get(site)
-        st.header(site.title())
-        if not card:
-            st.caption("No accepted product.")
-            continue
-        cols = st.columns([1, 3])
-        with cols[0]:
-            if card.get("image"):
-                st.image(card["image"], use_container_width=True)
-        with cols[1]:
-            st.write(card.get("title"))
-            st.write(card.get("price"))
-            if card.get("url"):
-                st.link_button("Open product", card["url"])
+        card = row.get(site) if isinstance(row, dict) else None
+        label = labels[site]
+        flat[f"{label} Title"] = _card_value(card, "title")
+        flat[f"{label} URL"] = _card_value(card, "url")
+        flat[f"{label} Image"] = _card_value(card, "image")
+    return flat
+
+
+st.title("Tuple Viewer")
+payload = read_json(FINAL_TUPLES, {"products": {}})
+products = payload.get("products", {}) if isinstance(payload, dict) else {}
+
+if not isinstance(products, dict) or not products:
+    st.info("No tuples available yet.")
+    st.stop()
+
+rows = [_flatten_row(str(ean), row if isinstance(row, dict) else {}) for ean, row in products.items()]
+rows.sort(key=lambda item: item.get("EAN", ""))
+
+query = st.text_input("Filter by EAN or title", "").strip().lower()
+if query:
+    filtered = []
+    for row in rows:
+        haystack = " ".join(str(value) for value in row.values()).lower()
+        if query in haystack:
+            filtered.append(row)
+    rows = filtered
+
+st.caption(f"Showing {len(rows)} tuples")
+
+try:
+    import pandas as pd
+
+    dataframe = pd.DataFrame(rows)
+    st.dataframe(
+        dataframe,
+        use_container_width=True,
+        height=680,
+        column_config={
+            "Amazon Image": st.column_config.ImageColumn("Amazon Image"),
+            "Amazon URL": st.column_config.LinkColumn("Amazon URL"),
+            "AJIO URL": st.column_config.LinkColumn("AJIO URL"),
+            "Columbia URL": st.column_config.LinkColumn("Columbia URL"),
+            "Adventure URL": st.column_config.LinkColumn("Adventure URL"),
+            "Myntra URL": st.column_config.LinkColumn("Myntra URL"),
+            "TataCliQ URL": st.column_config.LinkColumn("TataCliQ URL"),
+            "AJIO Image": st.column_config.ImageColumn("AJIO Image"),
+            "Columbia Image": st.column_config.ImageColumn("Columbia Image"),
+            "Adventure Image": st.column_config.ImageColumn("Adventure Image"),
+            "Myntra Image": st.column_config.ImageColumn("Myntra Image"),
+            "TataCliQ Image": st.column_config.ImageColumn("TataCliQ Image"),
+        },
+    )
+except Exception:
+    st.write(rows)

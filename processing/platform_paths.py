@@ -16,14 +16,14 @@ MARKETPLACE_PRODUCTS = JSON_DIR / "combined" / "marketplace_products.json"
 MYNTRA_PRODUCTS = JSON_DIR / "myntra" / "myntra_products.json"
 TATACLIQ_PRODUCTS = JSON_DIR / "tatacliq" / "tatacliq_products.json"
 FINAL_TUPLES = JSON_DIR / "combined" / "final_tuples.json"
-MASTER_PRODUCTS_PKL = EMBEDDINGS_DIR / "master_products.pkl"
 
 SCRAPE_PROGRESS = CACHE_DIR / "scrape_progress.json"
 PROCESS_STATUS = CACHE_DIR / "process_status.json"
-PRODUCTS_PKL = EMBEDDINGS_DIR / "products.pkl"
 CLIP_INDEX = EMBEDDINGS_DIR / "clip.index"
-DINOV2_INDEX = EMBEDDINGS_DIR / "dinov2.index"
 METADATA_PKL = EMBEDDINGS_DIR / "metadata.pkl"
+EMBEDDING_CACHE_PKL = CACHE_DIR / "clip_embedding_cache.pkl"
+VISUAL_INDEX_MANIFEST = CACHE_DIR / "visual_index_manifest.json"
+FINAL_TUPLES_MANIFEST = CACHE_DIR / "final_tuples_manifest.json"
 
 SITES = ("amazon", "ajio", "columbia", "adventuras", "myntra", "tatacliq")
 OUTPUT_GROUPS = (*SITES, "combined", "matcher")

@@ -1,6 +1,8 @@
-from pathlib import Path
-import tempfile
+from __future__ import annotations
+
 import sys
+import tempfile
+from pathlib import Path
 
 import streamlit as st
 
@@ -8,52 +10,92 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from processing.image_search import search_image
+from processing.image_search import search_images
+
+
+def _render_tuple(row: dict | None) -> None:
+    if not isinstance(row, dict):
+        st.write("-")
+        return
+    for site in ("amazon", "ajio", "columbia", "adventuras", "myntra", "tatacliq"):
+        card = row.get(site)
+        cols = st.columns([1, 3])
+        with cols[0]:
+            if isinstance(card, dict) and card.get("image"):
+                st.image(card["image"], width=120)
+            else:
+                st.write("-")
+        with cols[1]:
+            st.markdown(f"**{site.title()}**")
+            if not isinstance(card, dict):
+                st.write("-")
+                continue
+            st.write(card.get("title") or "-")
+            st.write(card.get("price") or "-")
+            if card.get("url"):
+                st.markdown(f"[Open {site}]({card['url']})")
+
 
 st.title("Image Search")
-uploaded = st.file_uploader("Upload image", type=["jpg", "jpeg", "png", "webp"])
+st.caption("Upload up to 50 images and get tuple matches in one run.")
 
-if uploaded and st.button("Search"):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(uploaded.name).suffix) as handle:
-        handle.write(uploaded.getbuffer())
-        image_path = Path(handle.name)
+top_k = st.number_input("Top K candidates", min_value=1, max_value=50, value=5, step=1)
+minimum_similarity = st.slider("Minimum confidence", min_value=0.0, max_value=1.0, value=0.0, step=0.01)
+uploads = st.file_uploader(
+    "Upload images",
+    type=["jpg", "jpeg", "png", "webp"],
+    accept_multiple_files=True,
+)
+
+if uploads and len(uploads) > 50:
+    st.error("Please upload 50 images or fewer.")
+
+if uploads and 0 < len(uploads) <= 50 and st.button("Run batch search"):
+    temp_paths: list[Path] = []
     try:
-        with st.spinner("Searching image index..."):
-            result = search_image(image_path)
+        for file in uploads:
+            suffix = Path(file.name).suffix or ".jpg"
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as handle:
+                handle.write(file.getbuffer())
+                temp_paths.append(Path(handle.name))
+
+        with st.spinner("Running CLIP + FAISS search..."):
+            output = search_images(temp_paths, top_k=int(top_k), minimum_similarity=float(minimum_similarity))
+
+        results = output.get("results", []) if isinstance(output, dict) else []
+        if not results:
+            st.warning("No matches found.")
+        else:
+            summary_rows = []
+            for item in results:
+                summary_rows.append({
+                    "Filename": item.get("filename") or "-",
+                    "Matched EAN": item.get("matched_ean") or "-",
+                    "Confidence": item.get("confidence") if item.get("confidence") is not None else "-",
+                })
+
+            try:
+                import pandas as pd
+
+                st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
+            except Exception:
+                st.write(summary_rows)
+
+            for index, item in enumerate(results, start=1):
+                filename = item.get("filename") or f"image_{index}"
+                ean = item.get("matched_ean") or "-"
+                confidence = item.get("confidence")
+                header = f"{filename} | EAN: {ean} | Confidence: {confidence if confidence is not None else '-'}"
+                with st.expander(header):
+                    row = item.get("tuple")
+                    if isinstance(row, dict):
+                        row = {"EAN": ean, **row}
+                    _render_tuple(row)
     except Exception as exc:
         st.error(str(exc))
-    else:
-        if not result:
-            st.warning("No Amazon-index tuple was found for this image.")
-        else:
-            # Be tolerant of multiple result shapes: dict (expected), list/tuple, or others.
-            ean = "-"
-            row = {}
-            if isinstance(result, dict):
-                ean = result.get("EAN") or result.get("ean") or "-"
-                row = result.get("tuple") or result.get("tuples") or {}
-            elif isinstance(result, (list, tuple)) and result:
-                first = result[0]
-                if isinstance(first, dict):
-                    ean = first.get("EAN") or first.get("ean") or "-"
-                    row = first.get("tuple") or first.get("tuples") or {}
-                else:
-                    ean = str(first)
-            else:
-                try:
-                    # Fallback: try treating result as a mapping-like object
-                    ean = str(result.get("EAN") if hasattr(result, "get") else result)
-                except Exception:
-                    ean = str(result)
-
-            st.subheader(f"EAN {ean}")
-            if not isinstance(row, dict):
-                row = {}
-            for site, card in row.items():
-                if site in {"EAN", "match", "updated_at"} or not isinstance(card, dict):
-                    continue
-                st.write(f"{site.title()}: {card.get('title')} | {card.get('price')}")
-                if card.get("image"):
-                    st.image(card["image"], width=160)
-                if card.get("url"):
-                    st.link_button(f"Open {site}", card["url"])
+    finally:
+        for temp_path in temp_paths:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except Exception:
+                pass

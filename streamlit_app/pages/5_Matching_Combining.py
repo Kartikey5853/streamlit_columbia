@@ -15,12 +15,9 @@ st.title("Indexing Pipeline")
 enable_auto_refresh()
 
 steps = [
-    ("1", "Load Amazon + marketplace JSON and generate master_products.pkl"),
-    ("2", "Load Myntra, generate CLIP embeddings, build FAISS indexes"),
-    ("3", "Load Tata CLiQ, generate CLIP embeddings, build FAISS indexes"),
-    ("4", "Run Amazon to Myntra/Tata matching with title, CLIP, and price"),
-    ("5", "Generate final tuples and store products.pkl, clip.index, metadata.pkl, final_tuples.json"),
-    ("6", "Display progress, logs, match counts, rejected counts, and tuple counts"),
+    ("index", "Build the shared Myntra/Tata CLIP FAISS index"),
+    ("match", "Run Amazon-to-target matching and write final tuples"),
+    ("all", "Run the full pipeline in one pass"),
 ]
 
 for number, label in steps:
@@ -34,7 +31,7 @@ with col2:
     if st.button("Stop pipeline", use_container_width=True):
         stop_process("matcher")
 
-step = st.segmented_control("Run one step", options=["1", "2", "3", "4", "5"], default="1")
+step = st.segmented_control("Run one step", options=["index", "match", "all"], default="index")
 if st.button("Run selected step"):
     start_process("matcher", [python_cmd(), "-m", "processing.indexing_pipeline", "--step", step])
 
