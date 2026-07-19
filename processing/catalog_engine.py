@@ -618,7 +618,7 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
     threshold = float(config["match_threshold"])
     manifest_path = FINAL_TUPLES_MANIFEST
     source_paths = [
-        AMAZON_PRODUCTS,
+        current_json_path("amazon"),
         MARKETPLACE_PRODUCTS,
         *(current_json_path(site) for site in MARKETPLACES),
     ]
@@ -627,7 +627,7 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
 
     logger = get_scraper_logger("matcher", log_path("matcher"))
     started_total = datetime.now()
-    amazon_products = products_by_ean(load_json(AMAZON_PRODUCTS, {}))
+    amazon_products = products_by_ean(load_json(current_json_path("amazon"), {}))
     marketplace_store = load_marketplace_store(MARKETPLACE_PRODUCTS)
     previous_payload = load_json(output, {"products": {}}) if output.exists() else {"products": {}}
     previous_products = previous_payload.get("products", {}) if isinstance(previous_payload, dict) else {}
@@ -759,7 +759,7 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
             log_event(logger, logging.INFO, "STEP-2C", f"PROGRESS tuples_built={index_pos}/{len(all_eans)}")
 
     payload = {
-        "schema_version": 1,
+        "schema_version": 3,
         "primary_key": "EAN",
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "rules": {
@@ -784,6 +784,11 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
         },
         "products": products,
     }
+    # Persist the matcher output as product identity.  This is intentionally
+    # after the existing scoring/matching code, so price-only scrapes never
+    # enter the expensive CLIP/FAISS path.
+    from .product_store import sync_canonical_mapping
+    sync_canonical_mapping(payload, write=True)
     save_json_atomic(output, payload)
     _save_embedding_cache(embedding_cache)
     if output.resolve() == FINAL_TUPLES.resolve():

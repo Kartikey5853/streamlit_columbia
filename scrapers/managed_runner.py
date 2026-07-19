@@ -22,6 +22,8 @@ from processing.platform_paths import (
     log_path,
 )
 from processing.process_status import mark_started, mark_stopped, update_site_status
+from processing.json_store import load_json
+from processing.product_store import ingest_scrape
 
 
 PYTHON = sys.executable
@@ -31,7 +33,7 @@ def command_for(site: str, headless: bool) -> list[str]:
     if site == "amazon":
         command = [PYTHON, str(BASE_DIR / "data_scraper" / "amazon_scraper_v2.py"), "--no-indexer"]
     elif site == "myntra":
-        command = [PYTHON, str(BASE_DIR / "data_scraper" / "mynthra_scraper.py")]
+        command = [PYTHON, str(BASE_DIR / "data_scraper" / "myntra_scraper.py"), "--output", str(latest_json_path("myntra"))]
     elif site == "tatacliq":
         command = [
             PYTHON,
@@ -184,7 +186,15 @@ def run(site: str, headless: bool) -> int:
             "message": f"{site} scraper exited with code {return_code}",
         }) + "\n")
     copy_if_exists(latest_log, dated_log)
-    copy_if_exists(latest_output, dated_output)
+    if return_code == 0 and latest_output.exists():
+        # Normalization owns both latest and date-stamped storage.  It also
+        # updates the long-format history and known tuple prices, with no ML.
+        try:
+            ingest_scrape(site, load_json(latest_output, []), run_date)
+        except Exception as exc:
+            return_code = 1
+            with latest_log.open("a", encoding="utf-8", errors="replace") as handle:
+                handle.write(json.dumps({"status": "ERROR", "message": f"post-scrape ingestion failed: {exc}"}) + "\n")
     canonical = canonical_output(site)
     if canonical is not None:
         copy_if_exists(latest_output, canonical)
@@ -196,6 +206,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Managed background scraper runner.")
     parser.add_argument("site", choices=["amazon", "ajio", "columbia", "adventuras", "myntra", "tatacliq"])
     parser.add_argument("--headless", action="store_true")
+    parser.add_argument("--headed", action="store_false", dest="headless")
+    parser.set_defaults(headless=True)
     args = parser.parse_args()
     raise SystemExit(run(args.site, args.headless))
 

@@ -55,6 +55,28 @@ def amazon_card(product: dict) -> dict:
     }
 
 
+def _append_history(row: dict, site: str, date_string: str, price: object, availability: bool) -> None:
+    history = row.setdefault("history", {})
+    entries = history.setdefault(site, [])
+    record = {
+        "date": date_string,
+        "price": price,
+        "availability": bool(availability),
+    }
+    if entries and entries[-1] == record:
+        return
+    entries.append(record)
+
+
+def _set_status(row: dict, site: str, available: bool, date_string: str) -> None:
+    status = row.setdefault("status", {})
+    current = status.get(site, {}) if isinstance(status.get(site), dict) else {}
+    status[site] = {
+        "available": bool(available),
+        "last_seen": date_string if available else current.get("last_seen"),
+    }
+
+
 async def scrape_site(site: str, headless: bool, eans: list[str] | None = None, limit: int | None = None) -> dict:
     config = load_config()
     cooldown = float(config.get(f"{site}_cooldown", 0))
@@ -99,10 +121,30 @@ async def scrape_site(site: str, headless: bool, eans: list[str] | None = None, 
                 log_event(logger, logging.WARNING, ean, "amazon source price missing; cannot validate candidate")
                 continue
             try:
+                scrape_date = datetime.now().date().isoformat()
                 result = await scrape_with_retries(scraper, page, ean, reference_price)
                 row = store["products"].setdefault(ean, {"EAN": ean})
                 row["amazon"] = row.get("amazon") or amazon_card(product)
-                row[site] = product_card(result) if result and result.get("title") else result
+                _set_status(row, "amazon", bool(row.get("amazon")), scrape_date)
+                _append_history(row, "amazon", scrape_date, row.get("amazon", {}).get("price") if isinstance(row.get("amazon"), dict) else None, bool(row.get("amazon")))
+
+                candidate_card = product_card(result) if result and result.get("title") else None
+                if candidate_card:
+                    row[site] = candidate_card
+                    _set_status(row, site, True, scrape_date)
+                else:
+                    # Keep the previous known card to preserve product continuity.
+                    if not isinstance(row.get(site), dict):
+                        row[site] = None
+                    _set_status(row, site, False, scrape_date)
+
+                _append_history(
+                    row,
+                    site,
+                    scrape_date,
+                    row.get(site, {}).get("price") if isinstance(row.get(site), dict) else None,
+                    bool(row.get("status", {}).get(site, {}).get("available")),
+                )
                 row["updated_at"] = datetime.now().isoformat(timespec="seconds")
                 store["updated_at"] = row["updated_at"]
                 save_json_atomic(MARKETPLACE_PRODUCTS, store)

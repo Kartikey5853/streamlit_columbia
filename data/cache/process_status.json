@@ -1,134 +1,14 @@
 {
-  "matcher": {
+  "fast_scrapers": {
     "running": true,
-    "pid": 15416,
-    "child_pid": null,
-    "current_ean": "STEP-3",
-    "success_count": 0,
-    "failure_count": 0,
-    "warning_count": 0,
-    "started_at": "2026-06-30T01:55:18",
-    "updated_at": "2026-06-30T01:55:19",
-    "message": "Generating Tata CLiQ CLIP embeddings; rebuilding FAISS indexes"
-  },
-  "ajio": {
-    "running": false,
-    "pid": null,
-    "child_pid": null,
-    "current_ean": null,
-    "success_count": 0,
-    "failure_count": 1,
-    "warning_count": 0,
-    "started_at": "2026-06-29T21:06:03",
-    "updated_at": "2026-06-29T21:06:05",
-    "message": "Exited with code 1"
-  },
-  "amazon": {
-    "running": false,
-    "pid": null,
-    "child_pid": null,
-    "current_ean": null,
-    "success_count": 0,
-    "failure_count": 178,
-    "warning_count": 7,
-    "started_at": "2026-06-23T15:40:55",
-    "updated_at": "2026-06-23T15:41:16",
-    "message": "Stopped by user"
-  },
-  "amazon_refresh": {
-    "running": false,
-    "pid": 15368,
+    "pid": 20884,
     "child_pid": null,
     "current_ean": null,
     "success_count": 0,
     "failure_count": 0,
     "warning_count": 0,
-    "started_at": "2026-06-29T20:53:10",
-    "updated_at": "2026-06-29T21:01:59",
-    "message": "Process exited"
-  },
-  "myntra": {
-    "running": false,
-    "pid": null,
-    "child_pid": null,
-    "current_ean": null,
-    "success_count": 0,
-    "failure_count": 1,
-    "warning_count": 0,
-    "started_at": "2026-06-29T21:05:27",
-    "updated_at": "2026-06-29T21:06:14",
-    "message": "Stopped by user"
-  },
-  "tatacliq_refresh": {
-    "running": false,
-    "pid": 7744,
-    "child_pid": null,
-    "current_ean": null,
-    "success_count": 0,
-    "failure_count": 0,
-    "warning_count": 0,
-    "started_at": "2026-06-29T21:01:29",
-    "updated_at": "2026-06-29T21:01:45",
-    "message": "Process exited"
-  },
-  "columbia": {
-    "running": false,
-    "pid": null,
-    "child_pid": null,
-    "current_ean": null,
-    "success_count": 0,
-    "failure_count": 0,
-    "warning_count": 49,
-    "started_at": "2026-06-29T21:12:38",
-    "updated_at": "2026-06-29T21:14:52",
-    "message": "Exited with code 0"
-  },
-  "adventuras": {
-    "running": false,
-    "pid": null,
-    "child_pid": null,
-    "current_ean": null,
-    "success_count": 0,
-    "failure_count": 1,
-    "warning_count": 0,
-    "started_at": "2026-06-29T21:07:01",
-    "updated_at": "2026-06-29T21:07:03",
-    "message": "Exited with code 1"
-  },
-  "myntra_refresh": {
-    "running": false,
-    "pid": 21384,
-    "child_pid": null,
-    "current_ean": null,
-    "success_count": 0,
-    "failure_count": 0,
-    "warning_count": 0,
-    "started_at": "2026-06-29T20:48:29",
-    "updated_at": "2026-06-29T21:05:26",
-    "message": "Process exited"
-  },
-  "tatacliq": {
-    "running": false,
-    "pid": null,
-    "child_pid": null,
-    "current_ean": null,
-    "success_count": 0,
-    "failure_count": 2,
-    "warning_count": 0,
-    "started_at": "2026-06-29T20:49:31",
-    "updated_at": "2026-06-29T20:49:33",
-    "message": "Exited with code 1"
-  },
-  "columbia_refresh": {
-    "running": false,
-    "pid": 13480,
-    "child_pid": null,
-    "current_ean": null,
-    "success_count": 0,
-    "failure_count": 0,
-    "warning_count": 0,
-    "started_at": "2026-06-29T21:12:33",
-    "updated_at": "2026-06-29T21:12:38",
-    "message": "Process exited"
+    "started_at": "2026-07-19T15:39:15",
+    "updated_at": "2026-07-19T15:39:15",
+    "message": "Starting fast scrapers"
   }
 }

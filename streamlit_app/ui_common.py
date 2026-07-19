@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -8,7 +9,7 @@ from pathlib import Path
 import streamlit as st
 
 from processing.config import load_config
-from processing.platform_paths import BASE_DIR, dated_log_path, log_path
+from processing.platform_paths import BASE_DIR, JSON_DIR, dated_log_path, log_path
 from processing.process_status import get_site_status, stop_site, mark_started, update_site_status
 
 
@@ -28,6 +29,12 @@ def managed_scraper_command(site: str, headless: bool) -> list[str]:
     command = [python_cmd(), "-m", "scrapers.managed_runner", site]
     if headless:
         command.append("--headless")
+    return command
+
+
+def fast_scraper_command(headless: bool) -> list[str]:
+    command = [python_cmd(), "-m", "scrapers.fast_runner"]
+    command.append("--headless" if headless else "--headed")
     return command
 
 
@@ -115,6 +122,23 @@ def render_live_panel(site: str) -> None:
             st.download_button(f"View Raw Logs", data=log_bytes, file_name=log_file.name)
         except Exception:
             st.button("View Raw Logs")
+
+
+def render_operational_console(site: str, output_folder: Path | None = None) -> None:
+    """Small operational panel used by the two scraper pages."""
+    enable_auto_refresh(3)
+    status = get_site_status(site)
+    st.caption(status.get("message") or "Idle")
+    st.code(tail_log(site, 160) or "No log output yet.", language="text")
+    folder = output_folder or JSON_DIR
+    if st.button("Open output folder", key=f"open_{site}"):
+        try:
+            if os.name == "nt":
+                os.startfile(str(folder))  # type: ignore[attr-defined]
+            else:
+                subprocess.Popen(["xdg-open", str(folder)])
+        except Exception as exc:
+            st.error(f"Could not open {folder}: {exc}")
 
 
 def controls(site: str, headless: bool, allow_refresh: bool = True) -> None:

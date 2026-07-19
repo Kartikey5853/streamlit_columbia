@@ -35,11 +35,21 @@ def format_inr(value: float | None) -> str | None:
 def product_card(product: dict | None) -> dict | None:
     if not isinstance(product, dict):
         return None
+    source_product_id = next((product.get(key) for key in ("source_product_id", "product_id", "productId", "id", "asin", "sku") if product.get(key)), None)
     return {
+        "source_product_id": str(source_product_id) if source_product_id is not None else None,
+        "ean": product.get("ean") or product.get("upc"),
         "title": product.get("title") or product.get("name"),
         "image": product.get("image") or product.get("image_url"),
         "url": product.get("url") or product.get("link"),
-        "price": product.get("price"),
+        "price": product.get("offer_price") if product.get("offer_price") not in (None, "") and product.get("source") == "ajio" else product.get("price"),
+        "price_value": product.get("price_value"),
+        "normal_price": product.get("normal_price", product.get("price")),
+        "normal_price_value": product.get("normal_price_value", product.get("price_value")),
+        "offer_price": product.get("offer_price"),
+        "offer_price_value": product.get("offer_price_value"),
+        "availability": product.get("availability", product.get("available")),
+        "scraped_at": product.get("scraped_at"),
     }
 
 
