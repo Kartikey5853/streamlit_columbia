@@ -11,8 +11,8 @@ if str(ROOT) not in sys.path:
 
 from processing.platform_paths import FINAL_TUPLES
 from processing.excel_export import excel_bytes, tuple_export_rows
-from processing.product_schema import MARKETPLACES
-from processing.product_store import tuples_with_latest_prices
+from processing.product_schema import MARKETPLACES, format_inr, normalize_sku, price_value
+from processing.product_store import latest_price_timestamp, tuples_with_latest_prices
 from streamlit_app.ui_common import read_json
 
 
@@ -22,18 +22,40 @@ def _card_value(card: dict | None, key: str) -> str:
     value = card.get(key)
     if value is None or str(value).strip() == "":
         return "-"
-    return str(value)
+    return (normalize_sku(value) or "-") if key == "sku" else str(value)
 
 
-def _flatten_row(ean: str, row: dict) -> dict:
+def _normalized_price(row: dict, site: str, card: dict | None, field: str = "price") -> str:
+    status = row.get("status", {}).get(site, {}) if isinstance(row.get("status"), dict) else {}
+    if isinstance(card, dict) and (card.get("availability") is False or status.get("available") is False):
+        return "OOS"
+    if not isinstance(card, dict):
+        return "NA"
+    raw = card.get(field) or card.get("normal_price") or card.get("price")
+    return format_inr(price_value(raw)) or "NA"
+
+
+def _primary_card(row: dict) -> dict | None:
+    for site in ("amazon", "columbia", "ajio", "myntra", "tatacliq", "adventuras"):
+        card = row.get(site)
+        if isinstance(card, dict):
+            return card
+    return None
+
+
+def _flatten_row(canonical_id: str, row: dict) -> dict:
     amazon = row.get("amazon") if isinstance(row, dict) else None
+    primary = _primary_card(row)
+    ean = row.get("EAN") or "-"
     flat = {
-        "Amazon Image": _card_value(amazon, "image"),
-        "Canonical Product ID": _card_value(row, "canonical_product_id"),
+        "Product Image": _card_value(primary, "image"),
+        "Canonical Product ID": _card_value(row, "canonical_product_id") if _card_value(row, "canonical_product_id") != "-" else canonical_id,
         "EAN": ean,
-        "Amazon Price": _card_value(amazon, "normal_price") if _card_value(amazon, "normal_price") != "-" else _card_value(amazon, "price"),
-        "AJIO Price": _card_value(row.get("ajio") if isinstance(row, dict) else None, "normal_price") if _card_value(row.get("ajio") if isinstance(row, dict) else None, "normal_price") != "-" else _card_value(row.get("ajio") if isinstance(row, dict) else None, "price"),
-        "AJIO Special Price": _card_value(row.get("ajio") if isinstance(row, dict) else None, "offer_price"),
+        "Columbia SKU": normalize_sku(row.get("columbia_sku") or (row.get("columbia") or {}).get("sku")) or "-",
+        "Columbia Product ID": _card_value(row, "columbia_product_id") if _card_value(row, "columbia_product_id") != "-" else _card_value(row.get("columbia"), "source_product_id"),
+        "Amazon Price": _normalized_price(row, "amazon", amazon),
+        "AJIO Price": _normalized_price(row, "ajio", row.get("ajio") if isinstance(row, dict) else None),
+        "AJIO Special Price": _normalized_price(row, "ajio", row.get("ajio") if isinstance(row, dict) else None, "offer_price"),
     }
 
     price_headers = {
@@ -43,7 +65,7 @@ def _flatten_row(ean: str, row: dict) -> dict:
         "tatacliq": "TataCliQ Price",
     }
     for site, header in price_headers.items():
-        flat[header] = _card_value(row.get(site) if isinstance(row, dict) else None, "price")
+        flat[header] = _normalized_price(row, site, row.get(site) if isinstance(row, dict) else None)
 
     labels = {
         "amazon": "Amazon",
@@ -64,17 +86,27 @@ def _flatten_row(ean: str, row: dict) -> dict:
 
 st.title("Tuple Viewer")
 payload = read_json(FINAL_TUPLES, {"products": {}})
+refresh_col, timestamp_col = st.columns([1, 3])
+with refresh_col:
+    refresh_requested = st.button("Refresh Prices", use_container_width=True)
 payload = tuples_with_latest_prices(payload)
+if refresh_requested:
+    st.session_state["tuple_price_refresh_message"] = "Prices refreshed from latest scraper data."
+if st.session_state.get("tuple_price_refresh_message"):
+    st.success(st.session_state["tuple_price_refresh_message"])
+with timestamp_col:
+    timestamp = latest_price_timestamp()
+    st.caption(f"Latest price data loaded: {timestamp or 'not available'}")
 products = payload.get("products", {}) if isinstance(payload, dict) else {}
 
 if not isinstance(products, dict) or not products:
     st.info("No tuples available yet.")
     st.stop()
 
-rows = [_flatten_row(str(ean), row if isinstance(row, dict) else {}) for ean, row in products.items()]
-rows.sort(key=lambda item: item.get("EAN", ""))
+rows = [_flatten_row(str(key), row if isinstance(row, dict) else {}) for key, row in products.items()]
+rows.sort(key=lambda item: item.get("Canonical Product ID", ""))
 
-query = st.text_input("Filter by EAN or title", "").strip().lower()
+query = st.text_input("Filter by canonical ID, SKU, EAN, product ID, or title", "").strip().lower()
 if query:
     filtered = []
     for row in rows:
@@ -115,7 +147,7 @@ try:
         use_container_width=True,
         height=680,
         column_config={
-            "Amazon Image": st.column_config.ImageColumn("Amazon Image"),
+            "Product Image": st.column_config.ImageColumn("Product Image"),
             "Amazon URL": st.column_config.LinkColumn("Amazon URL"),
             "AJIO URL": st.column_config.LinkColumn("AJIO URL"),
             "Columbia URL": st.column_config.LinkColumn("Columbia URL"),

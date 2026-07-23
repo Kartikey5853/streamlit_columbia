@@ -65,7 +65,7 @@ def run_pipeline(step: str = "all") -> dict:
 
         if normalized_step in {"all", "match"}:
             started = time.perf_counter()
-            log_event(logger, logging.INFO, "STEP-2", "START Building final tuples with one Amazon-to-target search pass")
+            log_event(logger, logging.INFO, "STEP-2", "START Building Columbia-eligible canonical tuples from the shared visual index")
             payload = build_final_tuples()
             summary["tuple_count"] = payload["summary"]["tuples"]
             summary["match_count"] = payload["summary"]["accepted_cross_market_matches"]

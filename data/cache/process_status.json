@@ -1,14 +1,26 @@
 {
   "fast_scrapers": {
-    "running": true,
-    "pid": 20884,
+    "running": false,
+    "pid": null,
     "child_pid": null,
     "current_ean": null,
     "success_count": 0,
     "failure_count": 0,
     "warning_count": 0,
-    "started_at": "2026-07-19T15:39:15",
-    "updated_at": "2026-07-19T15:39:15",
-    "message": "Starting fast scrapers"
+    "started_at": "2026-07-20T22:26:31",
+    "updated_at": "2026-07-20T22:47:11",
+    "message": "Fast scraper run complete"
+  },
+  "matcher": {
+    "running": false,
+    "pid": null,
+    "child_pid": null,
+    "current_ean": null,
+    "success_count": 2,
+    "failure_count": 0,
+    "warning_count": 0,
+    "started_at": "2026-07-20T20:25:20",
+    "updated_at": "2026-07-20T20:29:00",
+    "message": "Indexing pipeline complete"
   }
 }

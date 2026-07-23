@@ -22,6 +22,7 @@ from .config import load_config
 from .json_store import load_json, product_list, products_by_ean, save_json_atomic
 from .platform_paths import (
     AMAZON_PRODUCTS,
+    CANONICAL_MAPPING,
     CLIP_INDEX,
     EMBEDDING_CACHE_PKL,
     FINAL_TUPLES,
@@ -168,7 +169,7 @@ def _match_key(product: dict) -> str | None:
 
 
 def _product_id(product: dict) -> str | None:
-    for key in ("product_id", "productId", "id", "sku", "upc", "ean", "url", "link"):
+    for key in ("source_product_id", "product_id", "productId", "id", "asin", "sku", "upc", "ean", "url", "link"):
         value = product.get(key)
         if value:
             return str(value)
@@ -379,12 +380,24 @@ def build_visual_index(
         vector_batch.append(vector_np)
         metadata.append({
             "site": record.site,
+            "source": record.site,
             "key": record.key,
             "product_id": record.product_id,
+            "source_product_id": record.raw.get("source_product_id") or record.product_id,
+            "sku": record.raw.get("sku"),
+            "asin": record.raw.get("asin"),
+            "ean": record.raw.get("ean") or record.raw.get("upc"),
             "dataset_index": record.dataset_index,
             "title": record.title,
             "price": record.price,
             "price_value": record.price_value,
+            # AJIO has two distinct price fields.  Keep both on vector
+            # candidates so a validated match does not collapse them.
+            "normal_price": record.raw.get("normal_price", record.raw.get("price")),
+            "normal_price_value": record.raw.get("normal_price_value", record.raw.get("price_value")),
+            "offer_price": record.raw.get("offer_price", record.raw.get("special_price")),
+            "offer_price_value": record.raw.get("offer_price_value"),
+            "availability": record.raw.get("availability", record.raw.get("available")),
             "url": record.url,
             "image": record.image,
         })
@@ -438,16 +451,17 @@ def build_tuple_lookup(payload: dict) -> dict[tuple[str, str], tuple[str, dict]]
     products = payload.get("products", {}) if isinstance(payload, dict) else {}
     if not isinstance(products, dict):
         return lookup
-    for ean, row in products.items():
+    for tuple_key, row in products.items():
         if not isinstance(row, dict):
             continue
+        canonical_id = str(row.get("canonical_product_id") or tuple_key)
         for site in MATCH_SITES:
             card = row.get(site)
             if not isinstance(card, dict):
                 continue
-            for key in (card.get("url"), card.get("product_id"), card.get("title")):
+            for key in (card.get("source_product_id"), card.get("product_id"), card.get("asin"), card.get("url"), card.get("title")):
                 if key:
-                    lookup[(site, str(key))] = (str(ean), row)
+                    lookup[(site, str(key))] = (canonical_id, row)
     return lookup
 
 
@@ -496,6 +510,7 @@ def match_reference_to_targets(
     config: dict,
     top_k: int,
     embedding_cache: dict[str, dict] | None = None,
+    allow_new_embedding: bool = True,
 ) -> tuple[dict[str, dict], list[dict]]:
     image = reference.get("image") or reference.get("image_url")
     if not image:
@@ -512,6 +527,8 @@ def match_reference_to_targets(
                     vector = candidate.reshape(1, -1)
 
     if vector is None:
+        if not allow_new_embedding:
+            return {}, []
         image_result = _download_image(str(image))
         if image_result is None:
             return {}, []
@@ -523,7 +540,17 @@ def match_reference_to_targets(
                 "updated_at": datetime.now().isoformat(timespec="seconds"),
             }
 
-    count = min(max(1, top_k), index.ntotal)
+    # FAISS returns one global ranking.  Truncating that ranking to ``top_k``
+    # before grouping by marketplace starves sites whose visually similar
+    # products rank just below another site's products (most noticeably
+    # Amazon/AJIO).  Reserve up to ``top_k`` candidates for every target site
+    # so the per-site selection below is actually meaningful.
+    target_site_count = len({
+        str(item.get("site") or "")
+        for item in metadata
+        if item.get("site") and (not reference_site or str(item.get("site")) != reference_site)
+    })
+    count = min(max(1, top_k) * max(1, target_site_count), index.ntotal)
     scores, positions = index.search(vector.astype("float32"), count)
     scored: list[dict] = []
     best_by_site: dict[str, dict] = {}
@@ -538,6 +565,7 @@ def match_reference_to_targets(
             continue
         candidate_with_score = {
             **candidate,
+            "source": candidate.get("source") or candidate_site,
             "clip_score": float(score),
         }
         result = _score_candidate(reference, candidate_with_score, config)
@@ -575,7 +603,7 @@ def _today_iso() -> str:
     return datetime.now().date().isoformat()
 
 
-def _merge_status(existing: dict | None) -> dict:
+def _merge_status(existing: dict | None = None) -> dict:
     base = {
         site: {"available": False, "last_seen": None}
         for site in MARKETPLACES
@@ -591,7 +619,7 @@ def _merge_status(existing: dict | None) -> dict:
     return base
 
 
-def _merge_history(existing: dict | None) -> dict:
+def _merge_history(existing: dict | None = None) -> dict:
     base: dict[str, list[dict]] = {site: [] for site in MARKETPLACES}
     if isinstance(existing, dict):
         for site in MARKETPLACES:
@@ -613,183 +641,196 @@ def _append_history(history: dict, site: str, date_string: str, price: object, a
     entries.append(record)
 
 
+def _is_available(product: dict | None) -> bool:
+    """Treat an explicit false availability value as out of stock.
+
+    Older imports do not always carry availability, so their presence remains
+    the best evidence that the item is for sale.
+    """
+    return not isinstance(product, dict) or product.get("availability", product.get("available")) is not False
+
+
+def _canonical_id_for_columbia(
+    product: dict,
+    mapping_records: dict,
+    previous_by_columbia: dict[str, dict],
+) -> str:
+    from .product_store import source_key, source_product_id
+
+    product_id = source_product_id("columbia", product)
+    if not product_id:
+        raise ValueError("Eligible Columbia product is missing its stable source_product_id.")
+    mapped = mapping_records.get(source_key("columbia", product_id) or "")
+    if isinstance(mapped, dict) and mapped.get("canonical_product_id"):
+        return str(mapped["canonical_product_id"])
+    previous = previous_by_columbia.get(product_id)
+    if isinstance(previous, dict) and previous.get("canonical_product_id"):
+        return str(previous["canonical_product_id"])
+    return f"canonical:columbia:{product_id}"
+
+
 def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
+    """Build exactly one canonical tuple for every Columbia catalog product."""
+    from .product_store import (
+        backfill_price_canonical_ids,
+        canonical_rows,
+        source_product_id,
+        sync_canonical_mapping,
+    )
+
     config = load_config()
     threshold = float(config["match_threshold"])
     manifest_path = FINAL_TUPLES_MANIFEST
-    source_paths = [
-        current_json_path("amazon"),
-        MARKETPLACE_PRODUCTS,
-        *(current_json_path(site) for site in MARKETPLACES),
-    ]
+    # The former combined marketplace file was an Amazon-enrichment artifact.
+    # Current source files are the authoritative daily catalog inputs.
+    source_paths = [current_json_path(site) for site in MARKETPLACES]
+    columbia_path = current_json_path("columbia")
+    if not columbia_path.exists():
+        raise RuntimeError(
+            "Columbia catalog data is required to build canonical tuples. "
+            "Run the Columbia scraper or import its current artifact first."
+        )
     if output.resolve() == FINAL_TUPLES.resolve() and output.exists() and manifest_matches(load_manifest(manifest_path), source_paths):
-        return load_json(output, {"products": {}, "summary": {}})
+        cached_payload = load_json(output, {"products": {}, "summary": {}})
+        columbia_count = len(product_list(load_json(columbia_path, {})))
+        cached_products = cached_payload.get("products", {}) if isinstance(cached_payload, dict) else {}
+        cached_rules = cached_payload.get("rules", {}) if isinstance(cached_payload, dict) else {}
+        if (
+            isinstance(cached_products, dict)
+            and len(cached_products) == columbia_count
+            and cached_rules.get("candidate_pool_per_site") is True
+            and cached_rules.get("catalog_scope") == "all_columbia_products"
+        ):
+            return cached_payload
 
     logger = get_scraper_logger("matcher", log_path("matcher"))
     started_total = datetime.now()
-    amazon_products = products_by_ean(load_json(current_json_path("amazon"), {}))
-    marketplace_store = load_marketplace_store(MARKETPLACE_PRODUCTS)
     previous_payload = load_json(output, {"products": {}}) if output.exists() else {"products": {}}
-    previous_products = previous_payload.get("products", {}) if isinstance(previous_payload, dict) else {}
-    target_sources = [current_json_path(site) for site in MARKETPLACES]
+    previous_by_canonical = canonical_rows(previous_payload)
+    previous_by_columbia: dict[str, dict] = {}
+    for _, row in previous_by_canonical.values():
+        card = row.get("columbia") if isinstance(row, dict) else None
+        if isinstance(card, dict):
+            source_id = source_product_id("columbia", card)
+            if source_id:
+                previous_by_columbia[source_id] = row
+
+    mapping_payload = load_json(CANONICAL_MAPPING, {"records": {}})
+    mapping_records = mapping_payload.get("records", {}) if isinstance(mapping_payload, dict) else {}
+    if not isinstance(mapping_records, dict):
+        mapping_records = {}
+    target_sources = source_paths
     embedding_cache = _load_embedding_cache()
 
-    log_event(logger, logging.INFO, "STEP-2A", f"START building/loading visual index from {[path.name for path in target_sources]}")
-    build_result = build_visual_index(target_sources)
-    log_event(
-        logger,
-        logging.INFO,
-        "STEP-2A",
-        (
-            f"DONE visual index ready; embedded={build_result.get('embedded', 0)} "
-            f"cached={bool(build_result.get('cached'))} download_failures={build_result.get('download_failures', 0)}"
-        ),
-    )
-
-    log_event(logger, logging.INFO, "STEP-2B", "START loading visual index + metadata into matcher")
-    index, metadata = load_visual_index()
+    log_event(logger, logging.INFO, "STEP-2A", f"START loading existing visual index from {[path.name for path in target_sources]}")
+    try:
+        # Rebuilding canonical tuples is a relationship migration, not an
+        # embedding job.  Reuse a valid existing index even if today's raw
+        # catalog files have changed; `pipeline --step all` remains the
+        # explicit path for genuinely new-product embedding updates.
+        index, metadata = load_visual_index()
+        build_result = {
+            "embedded": len(metadata), "new_embeddings": 0, "download_failures": 0,
+            "cached": True, "reused_existing_index": True,
+        }
+    except RuntimeError:
+        build_result = build_visual_index(target_sources)
+        index, metadata = load_visual_index()
+    log_event(logger, logging.INFO, "STEP-2A", f"DONE visual index ready; embedded={build_result.get('embedded', 0)} cached={bool(build_result.get('cached'))}")
     log_event(logger, logging.INFO, "STEP-2B", f"DONE loaded index vectors={index.ntotal} metadata={len(metadata)}")
-    direct_sources = {
-        site: products_by_ean(load_json(current_json_path(site), {}))
-        for site in DIRECT_EAN_SITES
+
+    source_products = {
+        site: product_list(load_json(current_json_path(site), {}))
+        for site in MARKETPLACES
     }
-    existing_by_ean = marketplace_store if isinstance(marketplace_store, dict) else {}
-
-    log_event(logger, logging.INFO, "STEP-1", f"loaded Amazon products: {len(amazon_products)}")
-    log_event(logger, logging.INFO, "STEP-2", f"loaded direct marketplace rows: {len(existing_by_ean)}")
-    log_event(logger, logging.INFO, "STEP-3", f"visual index ready: {'cached' if build_result.get('cached') else 'rebuilt'} with {build_result['embedded']} vectors")
-
-    all_eans = sorted(set(amazon_products) | set(existing_by_ean) | set().union(*[set(source) for source in direct_sources.values()]))
+    columbia_products = source_products["columbia"]
     products: dict[str, dict] = {}
+    canonical_owner: dict[str, str] = {}
     accepted_matches = 0
     match_top_k = max(1, int(config.get("visual_match_top_k", 12)))
     scrape_date = _today_iso()
+    log_event(logger, logging.INFO, "STEP-2C", f"START Columbia catalog tuple assembly columbia_products={len(columbia_products)}")
 
-    log_event(logger, logging.INFO, "STEP-2C", f"START tuple assembly for total_eans={len(all_eans)}")
-
-    for index_pos, ean in enumerate(all_eans, start=1):
-        existing_marketplace_row = existing_by_ean.get(ean)
-        previous_row = previous_products.get(ean) if isinstance(previous_products, dict) else None
-
-        row = _normalize_marketplace_row(existing_marketplace_row, ean, include_target_sites=True)
-        if isinstance(previous_row, dict):
-            for site in MATCH_SITES:
-                if row.get(site) is None:
-                    row[site] = _copy_card(product_card(previous_row.get(site)))
-
+    for index_pos, columbia_product in enumerate(columbia_products, start=1):
+        canonical_id = _canonical_id_for_columbia(columbia_product, mapping_records, previous_by_columbia)
+        columbia_source_id = source_product_id("columbia", columbia_product)
+        # Some legacy Amazon/EAN mappings collapsed different Columbia
+        # variants onto one ID.  Preserve an existing ID only for its first
+        # Columbia source; every other eligible Columbia product gets its own
+        # stable canonical tuple instead of silently disappearing.
+        if canonical_owner.get(canonical_id) not in (None, columbia_source_id):
+            canonical_id = f"canonical:columbia:{columbia_source_id}"
+        canonical_owner[canonical_id] = str(columbia_source_id)
+        previous_row = previous_by_canonical.get(canonical_id, (None, None))[1]
+        row = empty_tuple("")
+        row["canonical_product_id"] = canonical_id
+        row["columbia"] = product_card(columbia_product)
         status = _merge_status(previous_row.get("status") if isinstance(previous_row, dict) else None)
         history = _merge_history(previous_row.get("history") if isinstance(previous_row, dict) else None)
-
-        amazon_card = product_card(amazon_products.get(ean))
-        if amazon_card:
-            row["amazon"] = amazon_card
-            status["amazon"] = {"available": True, "last_seen": scrape_date}
-        elif row.get("amazon"):
-            status["amazon"]["available"] = False
-
-        for site, source in direct_sources.items():
-            source_card = product_card(source.get(ean))
-            if source_card:
-                row[site] = source_card
-                status[site] = {"available": True, "last_seen": scrape_date}
-            elif row.get(site):
-                status[site]["available"] = False
-
+        status["columbia"] = {
+            "available": _is_available(columbia_product),
+            "last_seen": scrape_date,
+        }
         match_meta: dict[str, dict] = {}
-        reference_site = None
-        reference = None
-        for site in MARKETPLACES:
-            card = row.get(site)
-            if isinstance(card, dict) and (card.get("title") or card.get("image")):
-                reference_site = site
-                reference = card
-                break
 
-        if reference is not None:
-            query_sites = [site for site in MATCH_SITES if site != reference_site]
-            log_event(logger, logging.INFO, ean, f"matching reference={reference_site}; faiss candidates grouped by platform")
+        reference = row["columbia"]
+        if isinstance(reference, dict) and (reference.get("title") or reference.get("image")):
             best_by_site, scored = match_reference_to_targets(
-                reference,
-                reference_site,
-                index,
-                metadata,
-                config,
-                match_top_k,
-                embedding_cache,
+                reference, "columbia", index, metadata, config, match_top_k, embedding_cache,
+                allow_new_embedding=False,
             )
-            for site in query_sites:
+            for site in (site for site in MARKETPLACES if site != "columbia"):
                 match = best_by_site.get(site)
                 if match:
                     row[site] = match["card"]
                     match_meta[site] = match["meta"]
-                    status[site] = {"available": True, "last_seen": scrape_date}
+                    status[site] = {"available": _is_available(match["card"]), "last_seen": scrape_date}
                     accepted_matches += 1
-                    log_event(logger, logging.INFO, ean, f"{site} accepted with confidence={match['meta']['confidence']}")
                 else:
-                    if row.get(site):
-                        status[site]["available"] = False
-                    log_event(logger, logging.WARNING, ean, f"{site} no candidate met threshold={threshold}")
-            for rank, item in enumerate(scored[:5], start=1):
-                log_event(
-                    logger,
-                    logging.INFO,
-                    ean,
-                    (
-                        f"candidate #{rank}: site={item['site']} confidence={item['confidence']} "
-                        f"clip={item['clip_score']:.4f} title={item['title_score']:.4f} "
-                        f"price={item['price_status']} diff={item['price_difference']} accepted={item['accepted']}"
-                    ),
-                )
+                    # A source absent from today's matching data is not an
+                    # out-of-stock product: it is not present on that site.
+                    row[site] = None
+                    status[site] = {"available": False, "last_seen": None}
         else:
-            log_event(logger, logging.WARNING, ean, "no reference card available; tuple created from EAN only")
-            for site in MATCH_SITES:
-                if row.get(site):
-                    status[site]["available"] = False
+            log_event(logger, logging.WARNING, canonical_id, "Columbia anchor has no image/title; retained as a Columbia-only tuple")
 
         row["match"] = {site: meta for site, meta in match_meta.items() if meta}
         row["status"] = status
-        for site in MARKETPLACES:
-            card = row.get(site)
-            card_price = card.get("price") if isinstance(card, dict) else None
-            _append_history(history, site, scrape_date, card_price, bool(status.get(site, {}).get("available")))
         row["history"] = history
-        products[ean] = row
-        log_event(logger, logging.INFO, ean, f"tuple built; matched sites: {sum(1 for site in MATCH_SITES if row.get(site))}")
+        products[canonical_id] = row
         if index_pos % 100 == 0:
-            log_event(logger, logging.INFO, "STEP-2C", f"PROGRESS tuples_built={index_pos}/{len(all_eans)}")
+            log_event(logger, logging.INFO, "STEP-2C", f"PROGRESS tuples_built={index_pos}/{len(columbia_products)}")
 
     payload = {
-        "schema_version": 3,
-        "primary_key": "EAN",
+        "schema_version": 5,
+        "primary_key": "canonical_product_id",
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "rules": {
+            "catalog_scope": "all_columbia_products",
+            "eligibility": "Every product in the Columbia catalog, including out-of-stock products",
+            "anchor": "columbia",
             "threshold": threshold,
             "top_k": match_top_k,
+            "candidate_pool_per_site": True,
             "weights": {
                 "clip": float(config["match_clip_weight"]),
                 "title": float(config["match_title_weight"]),
                 "price": float(config["match_price_weight"]),
             },
-            "price_penalty": {
-                f"<={config['price_no_penalty_diff']}": "none",
-                f"{config['price_no_penalty_diff']}-{config['price_moderate_penalty_diff']}": config["price_moderate_score"],
-                f"{config['price_moderate_penalty_diff']}-{config['price_heavy_penalty_diff']}": config["price_heavy_score"],
-                f">{config['price_heavy_penalty_diff']}": config["price_near_rejection_score"],
-            },
             "visual_index": build_result,
         },
         "summary": {
             "tuples": len(products),
+            "columbia_products": len(columbia_products),
+            "columbia_available_products": sum(_is_available(product) for product in columbia_products),
+            "source_product_counts": {site: len(source_products[site]) for site in MARKETPLACES},
             "accepted_cross_market_matches": accepted_matches,
         },
         "products": products,
     }
-    # Persist the matcher output as product identity.  This is intentionally
-    # after the existing scoring/matching code, so price-only scrapes never
-    # enter the expensive CLIP/FAISS path.
-    from .product_store import sync_canonical_mapping
     sync_canonical_mapping(payload, write=True)
     save_json_atomic(output, payload)
+    backfill_price_canonical_ids(payload, write=True)
     _save_embedding_cache(embedding_cache)
     if output.resolve() == FINAL_TUPLES.resolve():
         save_json_atomic(dated_json_path("combined", datetime.now().date().isoformat()), payload)
@@ -800,15 +841,7 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
             "summary": payload["summary"],
         })
     elapsed = (datetime.now() - started_total).total_seconds()
-    log_event(
-        logger,
-        logging.INFO,
-        "STEP-2D",
-        (
-            f"DONE tuple assembly in {elapsed:.2f}s; tuples={payload['summary']['tuples']} "
-            f"accepted_cross_market_matches={payload['summary']['accepted_cross_market_matches']}"
-        ),
-    )
+    log_event(logger, logging.INFO, "STEP-2D", f"DONE tuple assembly in {elapsed:.2f}s; tuples={len(products)} accepted_cross_market_matches={accepted_matches}")
     return payload
 
 
@@ -829,30 +862,32 @@ def search_tuple_matches(image_path: Path, top_k: int = 5, minimum_similarity: f
         similarity = float(score)
         if similarity < minimum_similarity:
             continue
-        ean, row = None, None
+        canonical_id, row = None, None
         site = str(candidate.get("site") or "")
         for key in (candidate.get("url"), candidate.get("product_id"), candidate.get("title")):
             if not key:
                 continue
             found = lookup.get((site, str(key)))
             if found:
-                ean, row = found
+                canonical_id, row = found
                 break
-        if not ean or not row:
+        if not canonical_id or not row:
             for key, candidate_row in payload.get("products", {}).items():
                 if not isinstance(candidate_row, dict):
                     continue
                 card = candidate_row.get(candidate.get("site"))
                 if isinstance(card, dict) and (
-                    card.get("url") == candidate.get("url") or card.get("title") == candidate.get("title")
+                    card.get("source_product_id") == candidate.get("source_product_id")
+                    or card.get("url") == candidate.get("url") or card.get("title") == candidate.get("title")
                 ):
-                    ean = str(key)
+                    canonical_id = str(candidate_row.get("canonical_product_id") or key)
                     row = candidate_row
                     break
-        if not ean or not row:
+        if not canonical_id or not row:
             continue
         matches.append({
-            "EAN": ean,
+            "canonical_product_id": canonical_id,
+            "EAN": row.get("EAN"),
             "site": candidate.get("site"),
             "similarity": round(similarity, 6),
             "candidate": {
@@ -892,19 +927,20 @@ def search_tuple_matches_batch(image_paths: list[Path], top_k: int = 5, minimum_
             similarity = float(score)
             if similarity < minimum_similarity:
                 continue
-            ean, row = None, None
+            canonical_id, row = None, None
             site = str(candidate.get("site") or "")
             for key in (candidate.get("url"), candidate.get("product_id"), candidate.get("title")):
                 if not key:
                     continue
                 found = lookup.get((site, str(key)))
                 if found:
-                    ean, row = found
+                    canonical_id, row = found
                     break
-            if not ean or not row:
+            if not canonical_id or not row:
                 continue
             image_matches.append({
-                "EAN": ean,
+                "canonical_product_id": canonical_id,
+                "EAN": row.get("EAN"),
                 "site": site,
                 "confidence": round(similarity, 6),
                 "tuple": row,
@@ -914,6 +950,7 @@ def search_tuple_matches_batch(image_paths: list[Path], top_k: int = 5, minimum_
         results.append({
             "filename": image_path.name,
             "query_image": str(image_path.resolve()),
+            "canonical_product_id": top_match.get("canonical_product_id") if top_match else None,
             "matched_ean": top_match.get("EAN") if top_match else None,
             "confidence": top_match.get("confidence") if top_match else None,
             "tuple": top_match.get("tuple") if top_match else None,
@@ -933,6 +970,7 @@ def search_image_as_tuple(image_path: Path, top_k: int = 50) -> dict | None:
         return None
     first = matches[0]
     return {
+        "canonical_product_id": first.get("canonical_product_id"),
         "EAN": first.get("EAN"),
         "tuple": first.get("tuple"),
     }
