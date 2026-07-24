@@ -8,6 +8,7 @@ from pathlib import Path
 from processing.catalog_engine import search_tuple_matches
 from processing.json_store import load_json, products_by_ean
 from processing.platform_paths import FINAL_TUPLES, AMAZON_PRODUCTS
+from processing.unified_products import resolve_normalized_product
 
 
 def _lookup_ean(value: str) -> dict | None:
@@ -32,6 +33,17 @@ def search(query: str, top_k: int, minimum_score: float) -> dict:
             "query": query,
             "query_type": "image",
             "matches": result.get("matches", []),
+        }
+    normalized = resolve_normalized_product(query)
+    if normalized:
+        sku, row = normalized
+        return {
+            "query": query,
+            "query_type": "sku_ean",
+            "matches": [{
+                "sku": sku,
+                "tuple": row,
+            }],
         }
     if re.fullmatch(r"\D*\d{12,13}\D*", query):
         match = _lookup_ean(query)

@@ -16,8 +16,10 @@ MARKETPLACE_PRODUCTS = JSON_DIR / "combined" / "marketplace_products.json"
 MYNTRA_PRODUCTS = JSON_DIR / "myntra" / "myntra_products.json"
 TATACLIQ_PRODUCTS = JSON_DIR / "tatacliq" / "tatacliq_products.json"
 FINAL_TUPLES = JSON_DIR / "combined" / "final_tuples.json"
+NORMALIZED_PRODUCTS = JSON_DIR / "combined" / "normalized_products.json"
 CANONICAL_MAPPING = JSON_DIR / "combined" / "canonical_product_mapping.json"
 IDENTIFIER_LOOKUP = JSON_DIR / "combined" / "identifier_lookup.json"
+NORMALIZED_IDENTIFIER_LOOKUP = CACHE_DIR / "normalized_identifier_lookup.json"
 LATEST_PRICES = JSON_DIR / "combined" / "latest_prices.json"
 PRICE_HISTORY = JSON_DIR / "combined" / "price_history.json"
 UNMATCHED_PRODUCTS = JSON_DIR / "combined" / "unmatched_products.json"
@@ -29,6 +31,13 @@ METADATA_PKL = EMBEDDINGS_DIR / "metadata.pkl"
 EMBEDDING_CACHE_PKL = CACHE_DIR / "clip_embedding_cache.pkl"
 VISUAL_INDEX_MANIFEST = CACHE_DIR / "visual_index_manifest.json"
 FINAL_TUPLES_MANIFEST = CACHE_DIR / "final_tuples_manifest.json"
+
+SCRAPER_JSON_PRODUCTS = {
+    "amazon": BASE_DIR / "data_scraper" / "amazon.json",
+    "ajio": BASE_DIR / "data_scraper" / "ajio.json",
+    "columbia": BASE_DIR / "data_scraper" / "columbia.json",
+    "adventuras": BASE_DIR / "data_scraper" / "adventuras.json",
+}
 
 SITES = ("amazon", "ajio", "columbia", "adventuras", "myntra", "tatacliq")
 OUTPUT_GROUPS = (*SITES, "combined", "matcher")
@@ -93,6 +102,18 @@ def current_json_path(site: str) -> Path:
         "tatacliq": TATACLIQ_PRODUCTS,
     }.get(site)
     return canonical or latest
+
+
+def preferred_json_paths(site: str) -> tuple[Path, ...]:
+    """Return source JSON paths in preference order for normalization jobs."""
+    candidates = []
+    scraper_path = SCRAPER_JSON_PRODUCTS.get(site)
+    if scraper_path and scraper_path.exists():
+        candidates.append(scraper_path)
+    current_path = current_json_path(site)
+    if current_path.exists() and current_path not in candidates:
+        candidates.append(current_path)
+    return tuple(candidates)
 
 
 ensure_directories()

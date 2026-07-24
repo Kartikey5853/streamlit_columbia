@@ -14,6 +14,7 @@ from processing.image_search import search_images
 from processing.platform_paths import FINAL_TUPLES
 from processing.product_schema import normalize_sku
 from processing.product_store import resolve_tuples, tuples_with_latest_prices
+from processing.unified_products import flattened_rows, load_normalized_products, resolve_normalized_product
 from streamlit_app.ui_common import read_json
 
 
@@ -28,8 +29,8 @@ def _render_tuple(row: dict | None) -> None:
         st.write("-")
         return
     st.caption(
-        f"Canonical Product ID: {row.get('canonical_product_id') or '-'} • "
-        f"Columbia SKU: {row.get('columbia_sku') or '-'} • EAN: {row.get('EAN') or '-'}"
+        f"Canonical Product ID: {row.get('canonical_product_id') or '-'} | "
+        f"Columbia SKU: {row.get('columbia_sku') or '-'} | EAN: {row.get('EAN') or '-'}"
     )
     for site, label in SITE_LABELS.items():
         card = row.get(site)
@@ -56,13 +57,52 @@ def _render_tuple(row: dict | None) -> None:
                 st.markdown(f"[Open {label}]({card['url']})")
 
 
+def _render_unified_row(row: dict | None) -> None:
+    if not isinstance(row, dict):
+        st.write("-")
+        return
+    image = (row.get("columbia") or row.get("amazon") or row.get("ajio") or row.get("adventure") or {}).get("image")
+    if image:
+        st.image(image, width=180)
+    st.caption(
+        f"Columbia SKU: {row.get('sku') or '-'} | "
+        f"EAN(s): {', '.join(row.get('ean_numbers') or []) or '-'}"
+    )
+    for source, label in (("columbia", "Columbia"), ("amazon", "Amazon"), ("ajio", "AJIO"), ("adventure", "Adventure")):
+        card = row.get(source)
+        cols = st.columns([1, 3])
+        with cols[0]:
+            if isinstance(card, dict) and card.get("image"):
+                st.image(card["image"], width=120)
+            else:
+                st.write("-")
+        with cols[1]:
+            st.markdown(f"**{label}**")
+            if not isinstance(card, dict):
+                st.write("NA")
+                continue
+            st.write(card.get("title") or "NA")
+            st.write(f"Product ID: {card.get('source_product_id') or card.get('product_id') or 'NA'}")
+            st.write(f"SKU: {card.get('sku') or 'NA'}")
+            st.write(f"Price: {card.get('price') or card.get('normal_price') or 'NA'}")
+            if card.get("url"):
+                st.markdown(f"[Open {label}]({card['url']})")
+
+
 st.title("Search")
-st.caption("Resolve complete canonical tuples by identifier/text, or by image. Exact identifiers are preferred; title searches support partial/fuzzy matching.")
+st.caption("Resolve unified products by exact SKU/EAN first, then fall back to legacy tuples or image search.")
+normalized_payload = load_normalized_products()
 payload = tuples_with_latest_prices(read_json(FINAL_TUPLES, {"products": {}}))
+
+dataset_mode = "Unified SKU/EAN"
+if not isinstance(normalized_payload.get("products"), dict) or not normalized_payload.get("products"):
+    dataset_mode = "Legacy CLIP tuples"
+else:
+    dataset_mode = st.radio("Table dataset", ["Unified SKU/EAN", "Legacy CLIP tuples"], horizontal=True, index=0)
 
 identifier_query = st.text_area(
     "Identifier or title search (one per line, comma-separated also supported)",
-    placeholder="Columbia SKU, EAN, canonical ID, ASIN, AJIO/Myntra/Tata/Columbia/Adventuras product ID, or product title",
+    placeholder="SKU or EAN for unified records, or a legacy canonical ID/title",
 )
 if identifier_query and st.button("Search products"):
     requested = [value.strip() for value in identifier_query.replace(",", "\n").splitlines() if value.strip()]
@@ -70,22 +110,52 @@ if identifier_query and st.button("Search products"):
     seen: set[str] = set()
     missing: list[str] = []
     for value in requested:
-        found = resolve_tuples(value, payload)
-        if not found:
-            missing.append(value)
+        unified = resolve_normalized_product(value, normalized_payload)
+        if unified:
+            sku, row = unified
+            if sku not in seen:
+                seen.add(sku)
+                resolved.append((sku, row))
             continue
-        for canonical_id, row in found:
-            if canonical_id not in seen:
-                seen.add(canonical_id)
-                resolved.append((canonical_id, row))
+        found = resolve_tuples(value, payload)
+        if found:
+            for canonical_id, row in found:
+                if canonical_id not in seen:
+                    seen.add(canonical_id)
+                    resolved.append((canonical_id, row))
+            continue
+        missing.append(value)
     if missing:
         st.caption("No tuple found for: " + ", ".join(missing))
     if resolved:
         for canonical_id, row in resolved:
-            with st.expander(f"{canonical_id} | {row.get('columbia_sku') or '-'}", expanded=True):
-                _render_tuple(row)
+            with st.expander(f"{canonical_id}", expanded=True):
+                if isinstance(row, dict) and "ean_numbers" in row:
+                    _render_unified_row(row)
+                else:
+                    _render_tuple(row)
     elif not missing:
         st.info("No final canonical tuples matched those inputs.")
+
+if dataset_mode == "Unified SKU/EAN":
+    rows = flattened_rows(normalized_payload)
+    rows.sort(key=lambda item: item.get("Columbia SKU", ""))
+    st.caption(f"Showing {len(rows)} unified products")
+    try:
+        import pandas as pd
+
+        st.dataframe(
+            pd.DataFrame(rows),
+            use_container_width=True,
+            height=680,
+            column_config={
+                "Product Image": st.column_config.ImageColumn("Product Image"),
+            },
+            hide_index=True,
+        )
+    except Exception:
+        st.write(rows)
+    st.divider()
 
 st.subheader("Batch Image Search")
 top_k = st.number_input("Top K candidates", min_value=1, max_value=50, value=5, step=1)

@@ -1,38 +1,38 @@
 {
   "sources": [
     {
-      "path": "E:\\Columbia Scraper 2.0\\data\\json\\amazon\\latest_amazon.json",
-      "mtime_ns": 1784484252647517000,
+      "path": "D:\\streamlit_columbia3\\data\\json\\amazon\\latest_amazon.json",
+      "mtime_ns": 1784827508819499200,
       "size": 1634349
     },
     {
-      "path": "E:\\Columbia Scraper 2.0\\data\\json\\ajio\\latest_ajio.json",
-      "mtime_ns": 1784522668984940200,
+      "path": "D:\\streamlit_columbia3\\data\\json\\ajio\\latest_ajio.json",
+      "mtime_ns": 1784827508809972400,
       "size": 4081565
     },
     {
-      "path": "E:\\Columbia Scraper 2.0\\data\\json\\columbia\\latest_columbia.json",
-      "mtime_ns": 1784523044379496700,
+      "path": "D:\\streamlit_columbia3\\data\\json\\columbia\\latest_columbia.json",
+      "mtime_ns": 1784827508945053100,
       "size": 7695500
     },
     {
-      "path": "E:\\Columbia Scraper 2.0\\data\\json\\adventuras\\latest_adventuras.json",
-      "mtime_ns": 1784523081565472100,
+      "path": "D:\\streamlit_columbia3\\data\\json\\adventuras\\latest_adventuras.json",
+      "mtime_ns": 1784827508704777200,
       "size": 6885573
     },
     {
-      "path": "E:\\Columbia Scraper 2.0\\data\\json\\myntra\\latest_myntra.json",
-      "mtime_ns": 1784522851295515100,
+      "path": "D:\\streamlit_columbia3\\data\\json\\myntra\\latest_myntra.json",
+      "mtime_ns": 1784827510154133600,
       "size": 2536835
     },
     {
-      "path": "E:\\Columbia Scraper 2.0\\data\\json\\tatacliq\\latest_tatacliq.json",
-      "mtime_ns": 1784523010887517300,
+      "path": "D:\\streamlit_columbia3\\data\\json\\tatacliq\\latest_tatacliq.json",
+      "mtime_ns": 1784827510234397200,
       "size": 3262032
     }
   ],
-  "output": "E:\\Columbia Scraper 2.0\\data\\json\\combined\\final_tuples.json",
-  "updated_at": "2026-07-20T20:37:19",
+  "output": "D:\\streamlit_columbia3\\data\\json\\combined\\final_tuples.json",
+  "updated_at": "2026-07-23T23:01:36",
   "summary": {
     "tuples": 5543,
     "columbia_products": 5543,
@@ -45,6 +45,6 @@
       "myntra": 1708,
       "tatacliq": 2312
     },
-    "accepted_cross_market_matches": 13084
+    "accepted_cross_market_matches": 13090
   }
 }

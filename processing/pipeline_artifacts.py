@@ -12,6 +12,8 @@ from .platform_paths import (
     FINAL_TUPLES,
     FINAL_TUPLES_MANIFEST,
     METADATA_PKL,
+    NORMALIZED_IDENTIFIER_LOOKUP,
+    NORMALIZED_PRODUCTS,
     VISUAL_INDEX_MANIFEST,
 )
 from .product_store import ensure_final_tuple_identity
@@ -25,6 +27,8 @@ ARTIFACTS: dict[str, Path] = {
     "final_tuples.json": FINAL_TUPLES,
     "final_tuples_manifest.json": FINAL_TUPLES_MANIFEST,
     "canonical_product_mapping.json": CANONICAL_MAPPING,
+    "normalized_products.json": NORMALIZED_PRODUCTS,
+    "normalized_identifier_lookup.json": NORMALIZED_IDENTIFIER_LOOKUP,
 }
 # Older project exports did not contain the mapping.  It can be safely rebuilt
 # from imported tuples and current scraper metadata without invoking CLIP.

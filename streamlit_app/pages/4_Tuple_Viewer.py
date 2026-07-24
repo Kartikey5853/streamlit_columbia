@@ -13,6 +13,7 @@ from processing.platform_paths import FINAL_TUPLES
 from processing.excel_export import excel_bytes, tuple_export_rows
 from processing.product_schema import MARKETPLACES, format_inr, normalize_sku, price_value
 from processing.product_store import latest_price_timestamp, tuples_with_latest_prices
+from processing.unified_products import flattened_rows, load_normalized_products
 from streamlit_app.ui_common import read_json
 
 
@@ -84,7 +85,48 @@ def _flatten_row(canonical_id: str, row: dict) -> dict:
     return flat
 
 
+def _flatten_unified_row(row: dict) -> dict:
+    columbia = row.get("columbia") if isinstance(row, dict) else None
+    amazon = row.get("amazon") if isinstance(row, dict) else None
+    ajio = row.get("ajio") if isinstance(row, dict) else None
+    adventure = row.get("adventure") if isinstance(row, dict) else None
+
+    def _value(card: dict | None, key: str) -> str:
+        if not isinstance(card, dict):
+            return "NA"
+        value = card.get(key)
+        return str(value) if value not in (None, "") else "NA"
+
+    def _price(card: dict | None) -> str:
+        if not isinstance(card, dict):
+            return "NA"
+        raw = card.get("price") or card.get("normal_price") or card.get("offer_price")
+        parsed = price_value(raw)
+        if parsed is None:
+            return "NA"
+        return f"INR {parsed:,.2f}"
+
+    image = _value(columbia or amazon or ajio or adventure, "image")
+    if image == "NA":
+        image = _value(columbia or amazon or ajio or adventure, "image_url")
+
+    return {
+        "Product Image": image,
+        "Columbia SKU": str(row.get("sku") or "-"),
+        "Columbia Product ID": _value(columbia, "source_product_id"),
+        "EAN(s)": ", ".join(row.get("ean_numbers") or []) or "NA",
+        "Columbia Price": _price(columbia),
+        "Amazon Price": _price(amazon),
+        "AJIO Price": _price(ajio),
+        "Adventure Price": _price(adventure),
+        "Amazon Title": _value(amazon, "title"),
+        "AJIO Title": _value(ajio, "title"),
+        "Adventure Title": _value(adventure, "title"),
+    }
+
+
 st.title("Tuple Viewer")
+normalized_payload = load_normalized_products()
 payload = read_json(FINAL_TUPLES, {"products": {}})
 refresh_col, timestamp_col = st.columns([1, 3])
 with refresh_col:
@@ -97,16 +139,30 @@ if st.session_state.get("tuple_price_refresh_message"):
 with timestamp_col:
     timestamp = latest_price_timestamp()
     st.caption(f"Latest price data loaded: {timestamp or 'not available'}")
-products = payload.get("products", {}) if isinstance(payload, dict) else {}
+legacy_products = payload.get("products", {}) if isinstance(payload, dict) else {}
+unified_products = normalized_payload.get("products", {}) if isinstance(normalized_payload, dict) else {}
+has_unified = isinstance(unified_products, dict) and bool(unified_products)
+view_mode = "Legacy CLIP tuples"
+if has_unified:
+    view_mode = st.radio("Table dataset", ["Unified SKU/EAN", "Legacy CLIP tuples"], horizontal=True, index=0)
 
-if not isinstance(products, dict) or not products:
-    st.info("No tuples available yet.")
-    st.stop()
+if view_mode == "Unified SKU/EAN":
+    if not has_unified:
+        st.info("No unified SKU/EAN products available yet.")
+        st.stop()
+else:
+    if not isinstance(legacy_products, dict) or not legacy_products:
+        st.info("No tuples available yet.")
+        st.stop()
 
-rows = [_flatten_row(str(key), row if isinstance(row, dict) else {}) for key, row in products.items()]
-rows.sort(key=lambda item: item.get("Canonical Product ID", ""))
+if view_mode == "Unified SKU/EAN":
+    rows = [_flatten_unified_row(row if isinstance(row, dict) else {}) for row in unified_products.values()]
+    rows.sort(key=lambda item: item.get("Columbia SKU", ""))
+else:
+    rows = [_flatten_row(str(key), row if isinstance(row, dict) else {}) for key, row in legacy_products.items()]
+    rows.sort(key=lambda item: item.get("Canonical Product ID", ""))
 
-query = st.text_input("Filter by canonical ID, SKU, EAN, product ID, or title", "").strip().lower()
+query = st.text_input("Filter by SKU, EAN, product ID, or title", "").strip().lower()
 if query:
     filtered = []
     for row in rows:
@@ -115,28 +171,34 @@ if query:
             filtered.append(row)
     rows = filtered
 
-st.caption(f"Showing {len(rows)} tuples")
+st.caption(f"Showing {len(rows)} rows")
 
 with st.expander("Excel export options"):
-    export_options = {
-        "identifiers": st.checkbox("Include EAN / identifiers", value=True),
-        "source_ids": st.checkbox("Include source product IDs", value=True),
-        "prices": st.checkbox("Include prices", value=True),
-        "special_prices": st.checkbox("Include special/offer prices", value=True),
-        "titles": st.checkbox("Include product titles", value=True),
-        "urls": st.checkbox("Include product page URLs", value=True),
-        "image_urls": st.checkbox("Include image URLs", value=True),
-    }
-    if st.button("Create Excel export"):
-        try:
-            st.download_button(
-                "Download tuples.xlsx",
-                data=excel_bytes(tuple_export_rows(products, export_options)),
-                file_name="tuples.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-        except Exception as exc:
-            st.error(str(exc))
+    if view_mode == "Legacy CLIP tuples":
+        export_options = {
+            "identifiers": st.checkbox("Include EAN / identifiers", value=True),
+            "source_ids": st.checkbox("Include source product IDs", value=True),
+            "prices": st.checkbox("Include prices", value=True),
+            "special_prices": st.checkbox("Include special/offer prices", value=True),
+            "titles": st.checkbox("Include product titles", value=True),
+            "urls": st.checkbox("Include product page URLs", value=True),
+            "image_urls": st.checkbox("Include image URLs", value=True),
+        }
+        st.download_button(
+            "Download tuples.xlsx",
+            data=excel_bytes(tuple_export_rows(legacy_products, export_options)),
+            file_name="tuples.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+    else:
+        st.download_button(
+            "Download unified_products.xlsx",
+            data=excel_bytes(rows),
+            file_name="unified_products.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
 
 try:
     import pandas as pd

@@ -7659,7 +7659,7 @@
       "updated_at": "2026-07-19T15:48:07"
     },
     "ajio:701991703001:2026-07-19": {
-      "canonical_product_id": "canonical:ajio:701991703001",
+      "canonical_product_id": "canonical:columbia:9992853913879",
       "source": "ajio",
       "source_product_id": "701991703001",
       "ean": null,
@@ -9102,7 +9102,7 @@
       "updated_at": "2026-07-19T15:48:07"
     },
     "ajio:701063739002:2026-07-19": {
-      "canonical_product_id": "canonical:ajio:701063739002",
+      "canonical_product_id": "canonical:columbia:9895804338455",
       "source": "ajio",
       "source_product_id": "701063739002",
       "ean": null,
@@ -223277,7 +223277,7 @@
       "updated_at": "2026-07-20T00:04:41"
     },
     "ajio:700071634002:2026-07-20": {
-      "canonical_product_id": "canonical:columbia:9895804338455",
+      "canonical_product_id": "canonical:columbia:9895804403991",
       "source": "ajio",
       "source_product_id": "700071634002",
       "ean": null,
@@ -230193,7 +230193,7 @@
       "updated_at": "2026-07-20T10:14:31"
     },
     "ajio:701991703001:2026-07-20": {
-      "canonical_product_id": "canonical:ajio:701991703001",
+      "canonical_product_id": "canonical:columbia:9992853913879",
       "source": "ajio",
       "source_product_id": "701991703001",
       "ean": null,
@@ -447969,7 +447969,7 @@
       "updated_at": "2026-07-20T10:14:31"
     },
     "ajio:701063739002:2026-07-20": {
-      "canonical_product_id": "canonical:ajio:701063739002",
+      "canonical_product_id": "canonical:columbia:9895804338455",
       "source": "ajio",
       "source_product_id": "701063739002",
       "ean": null,
@@ -452831,7 +452831,7 @@
       "updated_at": "2026-07-20T10:14:31"
     },
     "ajio:700200439003:2026-07-20": {
-      "canonical_product_id": "canonical:columbia:9895793426711",
+      "canonical_product_id": "canonical:columbia:9895796703511",
       "source": "ajio",
       "source_product_id": "700200439003",
       "ean": null,
@@ -453390,7 +453390,7 @@
       "updated_at": "2026-07-20T10:14:31"
     },
     "ajio:700585806002:2026-07-20": {
-      "canonical_product_id": "canonical:ajio:700585806002",
+      "canonical_product_id": "canonical:195981382440",
       "source": "ajio",
       "source_product_id": "700585806002",
       "ean": null,
@@ -453806,7 +453806,7 @@
       "updated_at": "2026-07-20T10:14:31"
     },
     "ajio:700585790005:2026-07-20": {
-      "canonical_product_id": "canonical:ajio:700585790005",
+      "canonical_product_id": "canonical:195980977326",
       "source": "ajio",
       "source_product_id": "700585790005",
       "ean": null,
@@ -454287,7 +454287,7 @@
       "updated_at": "2026-07-20T10:14:31"
     },
     "ajio:700675096003:2026-07-20": {
-      "canonical_product_id": "canonical:195981382440",
+      "canonical_product_id": "canonical:columbia:9905285726487",
       "source": "ajio",
       "source_product_id": "700675096003",
       "ean": null,
@@ -459331,7 +459331,7 @@
       "updated_at": "2026-07-20T10:14:31"
     },
     "ajio:702124838004:2026-07-20": {
-      "canonical_product_id": "canonical:ajio:702124838004",
+      "canonical_product_id": "canonical:columbia:9895861977367",
       "source": "ajio",
       "source_product_id": "702124838004",
       "ean": null,
@@ -460085,7 +460085,7 @@
       "updated_at": "2026-07-20T10:14:31"
     },
     "ajio:701361709003:2026-07-20": {
-      "canonical_product_id": "canonical:ajio:701361709003",
+      "canonical_product_id": "canonical:columbia:9895793426711",
       "source": "ajio",
       "source_product_id": "701361709003",
       "ean": null,
@@ -463310,5 +463310,5 @@
     }
   },
   "kind": "price_history",
-  "updated_at": "2026-07-20T20:37:04"
+  "updated_at": "2026-07-23T23:01:31"
 }
