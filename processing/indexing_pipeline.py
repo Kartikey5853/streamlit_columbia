@@ -10,7 +10,8 @@ from datetime import datetime
 
 from .catalog_engine import enrich_normalized_products_with_clip
 from .config import load_config
-from .platform_paths import NORMALIZED_PRODUCTS, log_path
+from .json_store import save_json_atomic
+from .platform_paths import INITIAL_TUPLE, NORMALIZED_PRODUCTS, log_path
 from .process_status import mark_started, mark_stopped, update_site_status
 from .structured_logging import get_scraper_logger, log_event
 from .unified_products import build_normalized_products
@@ -45,12 +46,18 @@ def run_pipeline(step: str = "all") -> dict:
         if normalized_step in {"all", "exact"}:
             started = time.perf_counter()
             payload = build_normalized_products(NORMALIZED_PRODUCTS)
+            # Keep step 1 separately so the evidence for the visual discovery
+            # stage remains inspectable even after Myntra/TataCliq are added.
+            save_json_atomic(INITIAL_TUPLE, payload)
             summary.update(payload.get("summary", {}))
-            log_event(logger, logging.INFO, "STEP-1", f"DONE exact SKU/EAN assembly in {time.perf_counter() - started:.2f}s; rows={summary.get('normalized_products', 0)}")
+            log_event(logger, logging.INFO, "STEP-1", f"DONE exact SKU/EAN assembly in {time.perf_counter() - started:.2f}s; rows={summary.get('normalized_products', 0)} initial_tuple={INITIAL_TUPLE}")
             update_site_status(PIPELINE_SITE, {"success_count": 1, "message": "Exact SKU/EAN dataset ready"})
         else:
             from .unified_products import load_normalized_products
-            payload = load_normalized_products(NORMALIZED_PRODUCTS)
+            # A standalone step 2 always starts from the clean exact tuple,
+            # rather than retaining a previous visual match as evidence.
+            source = INITIAL_TUPLE if INITIAL_TUPLE.exists() else NORMALIZED_PRODUCTS
+            payload = load_normalized_products(source)
             if not payload.get("products"):
                 raise RuntimeError("Run the exact SKU/EAN step before CLIP enrichment.")
 

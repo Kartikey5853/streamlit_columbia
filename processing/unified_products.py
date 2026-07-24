@@ -449,7 +449,7 @@ def build_normalized_products(
                     "adventure": "exact SKU match against Columbia SKU",
                 },
                 "scope": ["columbia", "amazon", "ajio", "adventure", "myntra", "tatacliq"],
-                "clip_enrichment": "Amazon anchors query the Myntra/TataCliq candidate index in the unified pipeline",
+                "clip_enrichment": "Columbia images query Myntra/TataCliq candidates after exact tuple evidence is assembled",
             },
             "summary": {
                 "columbia_products": len(columbia_products),

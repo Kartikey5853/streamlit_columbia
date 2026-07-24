@@ -8,13 +8,22 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from processing.platform_paths import NORMALIZED_PRODUCTS
-from streamlit_app.ui_common import enable_auto_refresh, python_cmd, read_json, render_live_panel, start_process, stop_process
+from streamlit_app.ui_common import apply_theme, enable_auto_refresh, python_cmd, read_json, render_live_panel, start_process, stop_process
+
+apply_theme()
 
 
 st.title("Pipeline")
 enable_auto_refresh()
-st.info("One pipeline: exact SKU/EAN matching for Columbia, Amazon, AJIO, and Adventuras, followed by Columbia-to-Myntra/TataCliq CLIP matching.")
-st.caption("1. Normalize SKUs and aggregate Columbia EANs. 2. Attach Amazon by EAN and AJIO/Adventuras by SKU. 3. Index Columbia, Myntra, and TataCliq images. 4. For every normalized Columbia SKU, keep the closest Myntra and TataCliq result from its top 100 CLIP candidates.")
+st.info(
+    "This page combines the entire pipeline into a single process.  \n"
+    "Just click **Run Pipeline** and pray your laptop doesn't explode. 😄  \n"
+    "The process can take anywhere from **10 minutes to 2–3 hours**, depending on how powerful your laptop is. Good luck!"
+)
+st.caption(
+    "You can monitor the progress in the live logs. The pipeline consists of only three steps.  \n"
+    "A **'Pipeline Completed'** message will appear once the process finishes, but you'll need to refresh the page to see it."
+)
 
 left, right = st.columns(2)
 with left:

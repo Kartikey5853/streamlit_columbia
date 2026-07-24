@@ -17,6 +17,9 @@ MYNTRA_PRODUCTS = JSON_DIR / "myntra" / "myntra_products.json"
 TATACLIQ_PRODUCTS = JSON_DIR / "tatacliq" / "tatacliq_products.json"
 FINAL_TUPLES = JSON_DIR / "combined" / "final_tuples.json"
 NORMALIZED_PRODUCTS = JSON_DIR / "combined" / "normalized_products.json"
+# Immutable-by-step-2 snapshot of the exact EAN/SKU tuple.  This is the
+# price/title evidence used when discovering Myntra and TataCliq products.
+INITIAL_TUPLE = JSON_DIR / "combined" / "initial_tuple.json"
 CANONICAL_MAPPING = JSON_DIR / "combined" / "canonical_product_mapping.json"
 IDENTIFIER_LOOKUP = JSON_DIR / "combined" / "identifier_lookup.json"
 NORMALIZED_IDENTIFIER_LOOKUP = CACHE_DIR / "normalized_identifier_lookup.json"

@@ -7,8 +7,8 @@
     "success_count": 2,
     "failure_count": 0,
     "warning_count": 0,
-    "started_at": "2026-07-24T12:51:19",
-    "updated_at": "2026-07-24T12:52:23",
+    "started_at": "2026-07-24T21:44:07",
+    "updated_at": "2026-07-24T21:45:40",
     "message": "Unified pipeline complete"
   },
   "normalized": {
@@ -19,8 +19,20 @@
     "success_count": 1,
     "failure_count": 0,
     "warning_count": 0,
-    "started_at": "2026-07-24T12:51:19",
-    "updated_at": "2026-07-24T12:51:30",
+    "started_at": "2026-07-24T21:44:07",
+    "updated_at": "2026-07-24T21:44:12",
     "message": "Unified SKU/EAN normalization complete"
+  },
+  "fast_scrapers": {
+    "running": false,
+    "pid": null,
+    "child_pid": null,
+    "current_ean": null,
+    "success_count": 4,
+    "failure_count": 1,
+    "warning_count": 0,
+    "started_at": "2026-07-25T00:25:27",
+    "updated_at": "2026-07-25T00:37:45",
+    "message": "Fast scraper run complete"
   }
 }

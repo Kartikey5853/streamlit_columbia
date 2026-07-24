@@ -10,6 +10,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from streamlit_app.ui_common import apply_theme
+
+apply_theme()
+
 from processing.image_search import search_images
 from processing.product_schema import format_inr, normalize_sku, price_value
 from processing.unified_products import flattened_rows, load_normalized_products, resolve_normalized_product
@@ -70,7 +74,12 @@ def _render_unified_row(row: dict | None) -> None:
 
 
 st.title("Search")
-st.caption("Resolve the unified product tuple by normalized SKU or by any EAN attached to that product.")
+st.info(
+    "Enter image(s), SKU(s), or any other product ID to view all the data we have for a product.\n\n"
+    "• For SKUs, enter them on separate lines or separate them with commas.  \n"
+    "• For images, upload one or more files using the **Browse Files** button.  \n"
+    "• Image search may take some time. Please wait until the first batch has been fully processed before uploading another batch."
+)
 normalized_payload = load_normalized_products()
 
 identifier_query = st.text_area(
@@ -102,9 +111,7 @@ if identifier_query and st.button("Search products"):
         st.info("No final canonical tuples matched those inputs.")
 
 st.subheader("Batch Image Search")
-top_k = st.number_input("Top K candidates", min_value=1, max_value=50, value=5, step=1)
-minimum_similarity = st.slider("Minimum confidence", min_value=0.0, max_value=1.0, value=0.0, step=0.01)
-uploads = st.file_uploader("Upload images", type=["jpg", "jpeg", "png", "webp"], accept_multiple_files=True)
+uploads = st.file_uploader("Upload image(s)", type=["jpg", "jpeg", "png", "webp"], accept_multiple_files=True)
 
 if uploads and len(uploads) > 50:
     st.error("Please upload 50 images or fewer.")
@@ -119,7 +126,9 @@ if uploads and 0 < len(uploads) <= 50 and st.button("Run batch image search"):
                 temp_paths.append(Path(handle.name))
 
         with st.spinner("Running CLIP + FAISS search..."):
-            output = search_images(temp_paths, top_k=int(top_k), minimum_similarity=float(minimum_similarity))
+            # Search uses the pipeline's established candidate and confidence
+            # defaults; this page is intentionally upload-only.
+            output = search_images(temp_paths)
         results = output.get("results", []) if isinstance(output, dict) else []
         if not results:
             st.warning("No matches found.")

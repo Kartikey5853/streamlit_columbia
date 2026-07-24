@@ -7,10 +7,16 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from processing.platform_paths import JSON_DIR
-from streamlit_app.ui_common import managed_scraper_command, render_operational_console, start_process, stop_process
+from streamlit_app.ui_common import apply_theme, managed_scraper_command, render_operational_console, start_process, stop_process
+
+apply_theme()
 
 st.title("EAN Scraper")
-st.info("Runs Amazon Scraper V2 only. Completed scrapes are saved as dated JSON and update known product prices without rerunning matching.")
+st.info(
+    "Runs Amazon Scraper V2 only.  \n"
+    "Turn Headless mode off to see the actual scraping process.  \n"
+    "Refresh the page to view live logs and track the scraper's progress."
+)
 headless = st.toggle("Run in Headless Mode", value=True)
 left, right = st.columns(2)
 with left:

@@ -8,14 +8,20 @@ if str(ROOT) not in sys.path:
 import streamlit as st
 
 from processing.platform_paths import FINAL_TUPLES, PROCESS_STATUS
-from streamlit_app.ui_common import enable_auto_refresh, read_json
+from streamlit_app.ui_common import apply_theme, enable_auto_refresh, read_json
+
+apply_theme()
 
 
 st.set_page_config(page_title="Columbia Price Intelligence", layout="wide")
 enable_auto_refresh(4)
 
-st.title("Columbia Price Intelligence")
-st.caption("Local-first scraping, indexing, matching, tuple viewing, and image search.")
+st.info(
+    "This page shows which scraper is currently running.  \n"
+    "Go to **EAN Scraper** to scrape Amazon.  \n"
+    "Go to **Fast Scraper** to scrape all other supported websites."
+)
+
 
 status = read_json(PROCESS_STATUS, {})
 tuples = read_json(FINAL_TUPLES, {"summary": {}})

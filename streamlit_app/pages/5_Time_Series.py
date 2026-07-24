@@ -10,6 +10,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from streamlit_app.ui_common import apply_theme
+
+apply_theme()
+
 from processing.excel_export import excel_bytes
 from processing.json_store import load_json
 from processing.platform_paths import PRICE_HISTORY
@@ -139,7 +143,9 @@ def _render_chart(sku: str, row: dict, histories: dict[str, list[dict]], selecte
 
 
 st.title("Time Series")
-st.caption("Search by normalized SKU or any EAN, or select a row to view its price history.")
+st.info(
+    "Check which products have changed in price since the last scrape, or search for a specific product using the search bar."
+)
 payload = load_normalized_products()
 products = payload.get("products", {}) if isinstance(payload, dict) else {}
 histories = _history_by_sku(products)

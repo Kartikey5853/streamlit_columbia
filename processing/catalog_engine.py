@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+import math
 import pickle
+import re
 import threading
 from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor
@@ -121,6 +123,103 @@ def title_similarity(left: str | None, right: str | None) -> float:
     overlap = len(left_words & right_words) / max(1, len(left_words | right_words))
     sequence = SequenceMatcher(None, left.casefold(), right.casefold()).ratio()
     return round((0.65 * overlap) + (0.35 * sequence), 6)
+
+
+# Colours and merchandising/category words should not decide whether two
+# listings are the same style.  Roman numerals deliberately remain: in a
+# title such as "Power Lite II", the II is a product-version signal.
+TITLE_NOISE_WORDS = {
+    "columbia", "men", "mens", "women", "womens", "unisex", "for", "the", "with",
+    "jacket", "shirt", "tshirt", "tee", "pants", "pant", "shorts", "shoe", "shoes",
+    "black", "white", "grey", "gray", "blue", "red", "green", "yellow", "orange",
+    "pink", "purple", "brown", "beige", "navy", "cream", "khaki", "olive", "teal",
+    "maroon", "multi", "multicolor", "colour", "color", "regular", "fit", "new",
+}
+ROMAN_NUMERALS = {"i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"}
+
+
+def _title_tokens(value: str | None) -> set[str]:
+    return {
+        token for token in re.findall(r"[a-z0-9]+", str(value or "").casefold())
+        if (token not in TITLE_NOISE_WORDS and len(token) > 1) or token in ROMAN_NUMERALS
+    }
+
+
+def _title_frequency(metadata: list[dict]) -> tuple[dict[str, int], int]:
+    frequency: dict[str, int] = {}
+    total = 0
+    for candidate in metadata:
+        tokens = _title_tokens(candidate.get("title"))
+        if not tokens:
+            continue
+        total += 1
+        for token in tokens:
+            frequency[token] = frequency.get(token, 0) + 1
+    return frequency, total
+
+
+def _title_weight(token: str, frequency: dict[str, int], corpus_size: int) -> float:
+    # IDF makes distinctive style words matter far more than common catalogue
+    # vocabulary. Versions receive extra weight rather than being discarded.
+    weight = 1.0 + math.log((corpus_size + 1) / (frequency.get(token, 0) + 1))
+    return weight * (1.8 if token in ROMAN_NUMERALS else 1.0)
+
+
+def _title_evidence(reference_titles: list[str], candidate_title: str | None, frequency: dict[str, int], corpus_size: int) -> dict:
+    reference = set().union(*(_title_tokens(title) for title in reference_titles)) if reference_titles else set()
+    candidate = _title_tokens(candidate_title)
+    if not reference:
+        return {"title_score": 0.0, "title_coverage": 0.0, "unexpected_tokens": [], "title_status": "missing_reference_title"}
+    weights = {token: _title_weight(token, frequency, corpus_size) for token in reference}
+    total_weight = sum(weights.values()) or 1.0
+    coverage = sum(weights[token] for token in reference & candidate) / total_weight
+    unexpected = candidate - reference
+    unexpected_weight = sum(_title_weight(token, frequency, corpus_size) for token in unexpected)
+    candidate_weight = sum(_title_weight(token, frequency, corpus_size) for token in candidate) or 1.0
+    # Extra uncommon vocabulary normally identifies a different model.  The
+    # penalty is bounded so harmless retailer wording cannot erase a strong
+    # model-name match.
+    oov_penalty = min(0.40, 0.40 * unexpected_weight / candidate_weight)
+    roman_match = (reference & ROMAN_NUMERALS) == (candidate & ROMAN_NUMERALS)
+    score = coverage * (1.0 - oov_penalty) * (1.0 if roman_match else 0.55)
+    return {
+        "title_score": round(score, 6),
+        "title_coverage": round(coverage, 6),
+        "unexpected_tokens": sorted(unexpected),
+        "title_status": "ok" if roman_match else "version_mismatch",
+    }
+
+
+def _reference_price_profile(row: dict) -> dict:
+    prices: dict[str, float] = {}
+    for site in ("columbia", "amazon", "ajio", "adventure"):
+        card = row.get(site)
+        if not isinstance(card, dict):
+            continue
+        value = price_value(card.get("price_value")) or price_value(card.get("price"))
+        if value and value > 0:
+            prices[site] = value
+    values = sorted(prices.values())
+    if not values:
+        return {"prices": prices, "median": None, "min": None, "max": None}
+    return {"prices": prices, "median": float(np.median(values)), "min": values[0], "max": values[-1]}
+
+
+def _price_evidence(profile: dict, candidate_price, config: dict) -> dict:
+    reference = profile.get("median")
+    candidate = price_value(candidate_price)
+    if not reference or not candidate or candidate <= 0:
+        return {"price_score": 0.0, "price_ratio": None, "price_status": "missing_price", "price_eligible": False}
+    ratio = max(reference, candidate) / min(reference, candidate)
+    maximum = float(config.get("cross_market_price_max_ratio", 1.80))
+    # A log-ratio is symmetric: Rs 5k -> Rs 25k is just as implausible as
+    # Rs 25k -> Rs 5k.  The ratio itself is the hard gate, not a weak weight.
+    score = math.exp(-abs(math.log(candidate / reference)))
+    return {
+        "price_score": round(score, 6), "price_ratio": round(ratio, 6),
+        "price_status": "within_ratio" if ratio <= maximum else "ratio_rejected",
+        "price_eligible": ratio <= maximum,
+    }
 
 
 def strict_price_score(left_price, right_price, config: dict | None = None) -> tuple[float, str, float | None]:
@@ -608,6 +707,8 @@ def enrich_normalized_products_with_clip(
     result = build_visual_index(input_paths)
     index, metadata = load_visual_index()
     embedding_cache = _load_embedding_cache()
+    config = load_config()
+    token_frequency, title_corpus_size = _title_frequency(metadata)
     limit = min(max(1, int(candidate_limit)), index.ntotal)
     matched = {"myntra": 0, "tatacliq": 0}
     queried = 0
@@ -636,29 +737,84 @@ def enrich_normalized_products_with_clip(
 
         vector = np.asarray(vector_value, dtype="float32").reshape(1, -1)
         scores, positions = index.search(vector, limit)
-        best: dict[str, tuple[int, float, dict]] = {}
+        reference_titles = [
+            str(card.get("title")) for site in ("columbia", "amazon", "ajio", "adventure")
+            if isinstance((card := row.get(site)), dict) and card.get("title")
+        ]
+        price_profile = _reference_price_profile(row)
+        evaluated: list[dict] = []
         for rank, (score, position) in enumerate(zip(scores[0], positions[0]), start=1):
             if position < 0 or position >= len(metadata):
                 continue
             candidate = metadata[int(position)]
             site = str(candidate.get("site") or "")
-            if site not in {"myntra", "tatacliq"} or site in best:
+            if site not in {"myntra", "tatacliq"}:
                 continue
-            best[site] = (rank, float(score), candidate)
+            title = _title_evidence(reference_titles, candidate.get("title"), token_frequency, title_corpus_size)
+            price = _price_evidence(price_profile, candidate.get("price_value") or candidate.get("price"), config)
+            clip_score = max(0.0, float(score))
+            title_eligible = title["title_score"] >= float(config.get("title_minimum_score", 0.35))
+            clip_eligible = clip_score >= float(config.get("clip_minimum_score", 0.0))
+            eligible = bool(price["price_eligible"] and title_eligible and clip_eligible)
+            evaluated.append({
+                "rank_in_clip_results": rank,
+                "site": site,
+                "candidate": candidate,
+                "clip_score": round(clip_score, 6),
+                **title,
+                **price,
+                "title_eligible": title_eligible,
+                "clip_eligible": clip_eligible,
+                "accepted": eligible,
+            })
 
         queried += 1
+        # Price and title act as non-negotiable evidence gates.  Once a
+        # candidate clears both, CLIP remains the visual ordering signal;
+        # title and price resolve visually-close ties.  This avoids arbitrary
+        # 0.5/0.3/0.2 blending while preventing a 25k result from matching a
+        # stable 5k tuple.
+        evaluated.sort(key=lambda item: (
+            not item["accepted"], -item["clip_score"], -item["title_score"], -item["price_score"],
+        ))
+        best: dict[str, dict] = {}
+        for item in evaluated:
+            if item["accepted"] and item["site"] not in best:
+                best[item["site"]] = item
+
+        eans = row.get("ean_numbers") or []
+        ean_label = ",".join(str(ean) for ean in eans) or "-"
+        top_five = evaluated[:5]
+        for display_rank, item in enumerate(top_five, start=1):
+            log_event(
+                match_logger,
+                logging.INFO,
+                "TOP-5",
+                (
+                    f"ean={ean_label} sku={row_sku} rank={display_rank} site={item['site']} "
+                    f"clip={item['clip_score']:.6f} title={item['title_score']:.6f} "
+                    f"price={item['price_score']:.6f} ratio={item['price_ratio']} "
+                    f"accepted={item['accepted']} title_status={item['title_status']} "
+                    f"price_status={item['price_status']} candidate_title={item['candidate'].get('title') or '-'}"
+                ),
+            )
+
         clip_matches: dict[str, dict] = {}
         for site in ("myntra", "tatacliq"):
             selection = best.get(site)
             if selection is None:
                 row[site] = None
                 continue
-            rank, score, candidate = selection
+            candidate = selection["candidate"]
             row[site] = product_card(candidate)
             clip_matches[site] = {
-                "method": "clip_columbia_anchor",
-                "rank_in_top_candidates": rank,
-                "clip_score": round(score, 6),
+                "method": "clip_title_price_gated_columbia_anchor",
+                "rank_in_clip_candidates": selection["rank_in_clip_results"],
+                "clip_score": selection["clip_score"],
+                "title_score": selection["title_score"],
+                "price_score": selection["price_score"],
+                "price_ratio_to_tuple_median": selection["price_ratio"],
+                "tuple_price_median": price_profile["median"],
                 "candidate_limit": limit,
             }
             matched[site] += 1
@@ -666,9 +822,28 @@ def enrich_normalized_products_with_clip(
                 match_logger,
                 logging.INFO,
                 "CLIP-MATCH",
-                f"sku={row_sku} site={site} rank={rank}/{limit} score={score:.6f} title={candidate.get('title') or '-'}",
+                (
+                    f"ean={ean_label} sku={row_sku} site={site} clip_rank={selection['rank_in_clip_results']}/{limit} "
+                    f"clip={selection['clip_score']:.6f} title={selection['title_score']:.6f} "
+                    f"price={selection['price_score']:.6f} ratio={selection['price_ratio']} "
+                    f"candidate_title={candidate.get('title') or '-'}"
+                ),
             )
         row["clip_matches"] = clip_matches
+        row["clip_match_diagnostics"] = {
+            "ean_numbers": eans,
+            "reference_titles": reference_titles,
+            "tuple_price_profile": price_profile,
+            "top_5": [
+                {
+                    key: value for key, value in item.items() if key != "candidate"
+                } | {
+                    "title": item["candidate"].get("title"), "price": item["candidate"].get("price"),
+                    "url": item["candidate"].get("url"),
+                }
+                for item in top_five
+            ],
+        }
         if queried and queried % 100 == 0:
             log_event(match_logger, logging.INFO, "STEP-2B", f"PROGRESS queries={queried}/{eligible_rows} myntra={matched['myntra']} tatacliq={matched['tatacliq']}")
 
@@ -678,6 +853,7 @@ def enrich_normalized_products_with_clip(
         "targets": ["myntra", "tatacliq"],
         "candidate_limit": limit,
         "index_sources": ["columbia", "myntra", "tatacliq"],
+        "selection": "price ratio and frequency-weighted title gates; CLIP ranking among eligible candidates",
     }
     summary = payload.setdefault("summary", {})
     summary.update({

@@ -9,7 +9,9 @@ from processing.excel_export import excel_bytes, tuple_export_rows
 from processing.pipeline_artifacts import ARTIFACTS, export_pipeline_artifacts
 from processing.platform_paths import FINAL_TUPLES
 from processing.product_store import tuples_with_latest_prices
-from streamlit_app.ui_common import read_json
+from streamlit_app.ui_common import apply_theme, read_json
+
+apply_theme()
 
 
 SITE_LABELS = {

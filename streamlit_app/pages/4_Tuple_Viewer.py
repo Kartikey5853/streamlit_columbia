@@ -7,12 +7,21 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from streamlit_app.ui_common import apply_theme
+
+apply_theme()
+
 from processing.excel_export import excel_bytes
 from processing.unified_products import flattened_rows, load_normalized_products
 
 
 st.title("Tuple Viewer")
-st.caption("The single unified output: exact Columbia/Amazon/AJIO/Adventuras matches plus Columbia-anchored Myntra and TataCliq CLIP matches.")
+st.info(
+    "View all products and their corresponding prices in one place.  \n"
+    "This page helps you verify the scraped data, identify any errors, and get a complete overview.  \n"
+    "You can export this data as an Excel file and choose which columns to include using **Choose Export Columns**."
+)
+
 payload = load_normalized_products()
 rows = flattened_rows(payload)
 if not rows:
@@ -45,6 +54,9 @@ if selected_columns:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
+st.caption(
+    "More data is available on the right. Hover over the table to access the full-screen button."
+)
 try:
     import pandas as pd
 
