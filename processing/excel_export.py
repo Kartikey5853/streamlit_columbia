@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from io import BytesIO
 
-from .product_schema import MARKETPLACES, format_inr, normalize_sku, price_value
+from .product_schema import MARKETPLACES, availability_display, format_inr, normalize_sku, price_value
 
 
 SITE_LABELS = {
@@ -18,12 +18,9 @@ def _value(card: dict | None, field: str):
 
 
 def _availability_value(row: dict, source: str, card: dict | None, value):
-    status = row.get("status", {}).get(source, {}) if isinstance(row.get("status"), dict) else {}
-    if isinstance(card, dict) and (card.get("availability") is False or status.get("available") is False):
-        return "OOS"
-    if not isinstance(card, dict):
-        return "NA"
-    return value if value not in (None, "") else "NA"
+    # Status records are historical and may be false simply because no match
+    # exists.  Only explicit source availability can produce OOS.
+    return availability_display(source, card, value)
 
 
 def tuple_export_rows(products: dict, options: dict[str, bool]) -> list[dict]:

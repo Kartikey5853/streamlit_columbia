@@ -22,6 +22,9 @@ st.info(
     "You can export this data as an Excel file and choose which columns to include using **Choose Export Columns**."
 )
 
+if st.button("Refresh tuple data", icon="🔄"):
+    st.rerun()
+
 payload = load_normalized_products()
 rows = flattened_rows(payload)
 if not rows:

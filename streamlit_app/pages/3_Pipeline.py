@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from processing.pipeline_artifacts import import_pipeline_artifacts
 from processing.platform_paths import NORMALIZED_PRODUCTS
 from streamlit_app.ui_common import apply_theme, enable_auto_refresh, python_cmd, read_json, render_live_panel, start_process, stop_process
 
@@ -32,6 +33,18 @@ with left:
 with right:
     if st.button("Stop pipeline", use_container_width=True):
         stop_process("matcher")
+
+st.subheader("Restore exported CLIP embeddings")
+st.caption("Upload the `pipeline_artifacts.zip` created on the Export page. This restores the CLIP index, metadata, cache, and tuples without running CLIP again.")
+artifact_upload = st.file_uploader("Pipeline artifact zip", type=["zip"], key="pipeline_artifact_upload")
+if artifact_upload is not None and st.button("Restore pipeline artifacts", use_container_width=True):
+    try:
+        result = import_pipeline_artifacts(artifact_upload.getvalue())
+        st.success("Restored pipeline artifacts without rebuilding CLIP embeddings: " + ", ".join(result["imported"]))
+        if result["missing_optional"]:
+            st.caption("Optional artifacts not included: " + ", ".join(result["missing_optional"]))
+    except Exception as exc:
+        st.error(f"Could not restore pipeline artifacts: {exc}")
 
 payload = read_json(NORMALIZED_PRODUCTS, {"summary": {}})
 summary = payload.get("summary", {})

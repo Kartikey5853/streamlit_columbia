@@ -2,24 +2,24 @@
   "sources": [
     {
       "path": "E:\\Columbia Scraper 2.0\\data\\json\\columbia\\latest_columbia.json",
-      "mtime_ns": 1784909562112025200,
+      "mtime_ns": 1784920048730515600,
       "size": 143
     },
     {
       "path": "E:\\Columbia Scraper 2.0\\data\\json\\myntra\\latest_myntra.json",
-      "mtime_ns": 1784909380705602800,
-      "size": 2617746
+      "mtime_ns": 1784919865883987100,
+      "size": 2625675
     },
     {
       "path": "E:\\Columbia Scraper 2.0\\data\\json\\tatacliq\\latest_tatacliq.json",
-      "mtime_ns": 1784909546113654600,
-      "size": 3395903
+      "mtime_ns": 1784920031719162200,
+      "size": 3396555
     }
   ],
   "index_path": "E:\\Columbia Scraper 2.0\\data\\embeddings\\clip.index",
   "metadata_path": "E:\\Columbia Scraper 2.0\\data\\embeddings\\metadata.pkl",
-  "embedded": 3939,
-  "new_embeddings": 64,
+  "embedded": 3947,
+  "new_embeddings": 18,
   "cache_path": "E:\\Columbia Scraper 2.0\\data\\cache\\clip_embedding_cache.pkl",
-  "updated_at": "2026-07-24T21:44:56"
+  "updated_at": "2026-07-25T01:05:15"
 }

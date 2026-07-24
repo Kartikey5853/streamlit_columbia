@@ -9,7 +9,7 @@
   "match_price_weight": 0.1,
   "cross_market_price_max_ratio": 1.8,
   "title_minimum_score": 0.35,
-  "clip_minimum_score": 0.0,
+  "clip_minimum_score": 0.80,
   "price_no_penalty_diff": 500,
   "price_moderate_penalty_diff": 1000,
   "price_heavy_penalty_diff": 5000,

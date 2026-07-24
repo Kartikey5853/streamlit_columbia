@@ -16,6 +16,7 @@ from .platform_paths import (
     NORMALIZED_PRODUCTS,
     VISUAL_INDEX_MANIFEST,
 )
+from .json_store import save_bytes_atomic
 from .product_store import ensure_final_tuple_identity
 
 
@@ -61,10 +62,7 @@ def import_pipeline_artifacts(contents: bytes) -> dict:
             data = archive.read(info)
             if not data:
                 raise ValueError(f"Artifact is empty: {name}")
-            path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = path.with_suffix(path.suffix + ".tmp")
-            tmp.write_bytes(data)
-            tmp.replace(path)
+            save_bytes_atomic(path, data)
             imported.append(name)
     if "canonical_product_mapping.json" not in imported:
         ensure_final_tuple_identity()

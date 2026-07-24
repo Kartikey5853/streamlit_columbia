@@ -21,7 +21,14 @@ import torch
 from PIL import Image
 
 from .config import load_config
-from .json_store import load_json, product_list, products_by_ean, save_json_atomic
+from .json_store import (
+    load_json,
+    product_list,
+    products_by_ean,
+    replace_file_with_retry,
+    save_json_atomic,
+    unique_temp_path,
+)
 from .platform_paths import (
     AMAZON_PRODUCTS,
     CANONICAL_MAPPING,
@@ -360,9 +367,17 @@ def load_visual_index(index_path: Path = CLIP_INDEX, metadata_path: Path = METAD
 
 def _save_index(index, metadata: list[dict], index_path: Path, metadata_path: Path) -> None:
     index_path.parent.mkdir(parents=True, exist_ok=True)
-    faiss.write_index(index, str(index_path))
-    with metadata_path.open("wb") as handle:
-        pickle.dump(metadata, handle)
+    index_tmp = unique_temp_path(index_path)
+    metadata_tmp = unique_temp_path(metadata_path)
+    try:
+        faiss.write_index(index, str(index_tmp))
+        with metadata_tmp.open("wb") as handle:
+            pickle.dump(metadata, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        replace_file_with_retry(index_tmp, index_path)
+        replace_file_with_retry(metadata_tmp, metadata_path)
+    finally:
+        index_tmp.unlink(missing_ok=True)
+        metadata_tmp.unlink(missing_ok=True)
 
 
 def _load_embedding_cache(path: Path = EMBEDDING_CACHE_PKL) -> dict[str, dict]:
@@ -377,9 +392,22 @@ def _load_embedding_cache(path: Path = EMBEDDING_CACHE_PKL) -> dict[str, dict]:
 
 
 def _save_embedding_cache(cache: dict[str, dict], path: Path = EMBEDDING_CACHE_PKL) -> None:
+    """Atomically persist embeddings without touching a usable old cache.
+
+    The cache can be tens of MB and Windows can reject an in-place overwrite
+    while antivirus, Explorer, or another process is inspecting it.  Writing a
+    sibling temporary file and replacing only after a successful pickle avoids
+    both partial cache files and the intermittent invalid-argument failure.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("wb") as handle:
-        pickle.dump(cache, handle)
+    temporary = unique_temp_path(path)
+    try:
+        with temporary.open("wb") as handle:
+            pickle.dump(cache, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        replace_file_with_retry(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink(missing_ok=True)
 
 
 def build_visual_index(

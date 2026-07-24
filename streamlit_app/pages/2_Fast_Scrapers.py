@@ -13,7 +13,15 @@ apply_theme()
 from data_scraper.ajio_scraper_wrapper import is_cdp_available, start_chrome
 
 st.title("Fast Scrapers")
-st.info("Runs AJIO, Myntra, TataCliQ, Columbia, and Adventuras together. A failure is logged and does not stop the remaining sources.")
+st.info(
+    "Note: If this is your first time using the scraper, click **Open Scraper Chrome** and log in to your Gmail account. "
+    "Keep **Headless Mode** turned off for the initial setup.\n\n"
+    "Click **Start Scraping**. A Chrome window for **AJIO** will open first. "
+    "After the AJIO scraper finishes (approximately 2–3 minutes), another Chrome window for **Myntra** will open. "
+    "It will close automatically when the scraping is complete.\n\n"
+    "Wait another 1–2 minutes, then refresh the page. If the status shows **Completed**, the scraping process has finished successfully.\n\n"
+    "**Recommendation:** Run this scraper once a day to keep all product prices up to date."
+)
 headless = st.toggle("Run in Headless Mode", value=False)
 left, middle, right = st.columns(3)
 with left:

@@ -18,7 +18,7 @@ from .platform_paths import (
     log_path,
     preferred_json_paths,
 )
-from .product_schema import normalize_sku, price_value
+from .product_schema import availability_display, normalize_sku, price_value
 from .product_store import normalize_product
 from .structured_logging import get_scraper_logger, log_event
 from .process_status import mark_started, mark_stopped, update_site_status
@@ -518,22 +518,19 @@ def flattened_rows(payload: dict | None = None) -> list[dict]:
     if not isinstance(products, dict):
         return []
 
-    def _card_value(card: dict | None, key: str) -> str:
+    def _card_value(site: str, card: dict | None, key: str) -> str:
         if not isinstance(card, dict):
             return "NA"
         value = card.get(key)
-        if value is None or str(value).strip() == "":
-            return "NA"
-        return str(value)
+        return "NA" if value is None or str(value).strip() == "" else str(value)
 
-    def _price_text(card: dict | None) -> str:
+    def _price_text(site: str, card: dict | None) -> str:
         if not isinstance(card, dict):
             return "NA"
         raw = card.get("price") or card.get("normal_price") or card.get("offer_price")
-        if raw in (None, ""):
-            return "NA"
         parsed = price_value(raw)
-        return f"INR {parsed:,.2f}" if parsed is not None else str(raw)
+        value = f"INR {parsed:,.2f}" if parsed is not None else raw
+        return str(availability_display(site, card, value))
 
     rows: list[dict] = []
     for sku, row in products.items():
@@ -545,9 +542,11 @@ def flattened_rows(payload: dict | None = None) -> list[dict]:
         adventure = row.get("adventure") if isinstance(row.get("adventure"), dict) else None
         myntra = row.get("myntra") if isinstance(row.get("myntra"), dict) else None
         tatacliq = row.get("tatacliq") if isinstance(row.get("tatacliq"), dict) else None
-        image = _card_value(columbia or amazon or ajio or adventure or myntra or tatacliq, "image")
+        image_card = columbia or amazon or ajio or adventure or myntra or tatacliq
+        image_site = next((site for site, card in (("columbia", columbia), ("amazon", amazon), ("ajio", ajio), ("adventure", adventure), ("myntra", myntra), ("tatacliq", tatacliq)) if card is image_card), "columbia")
+        image = _card_value(image_site, image_card, "image")
         if image == "NA":
-            image = _card_value(columbia or amazon or ajio or adventure or myntra or tatacliq, "image_url")
+            image = _card_value(image_site, image_card, "image_url")
         result = {
             "Product Image": image,
             "Columbia SKU": _normalized_sku(row.get("sku") or sku) or "NA",
@@ -561,12 +560,12 @@ def flattened_rows(payload: dict | None = None) -> list[dict]:
             ("myntra", "Myntra", myntra),
             ("tatacliq", "TataCliq", tatacliq),
         )
-        for _, label, card in marketplace_cards:
-            result[f"{label} Price"] = _price_text(card)
-        for _, label, card in marketplace_cards:
-            result[f"{label} Title"] = _card_value(card, "title")
-        for _, label, card in marketplace_cards:
-            result[f"{label} Product URL"] = _card_value(card, "url")
+        for site, label, card in marketplace_cards:
+            result[f"{label} Price"] = _price_text(site, card)
+        for site, label, card in marketplace_cards:
+            result[f"{label} Title"] = _card_value(site, card, "title")
+        for site, label, card in marketplace_cards:
+            result[f"{label} Product URL"] = _card_value(site, card, "url")
         rows.append(result)
     rows.sort(key=lambda item: item.get("Columbia SKU", ""))
     return rows

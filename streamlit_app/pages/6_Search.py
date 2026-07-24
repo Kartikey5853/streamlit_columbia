@@ -15,7 +15,7 @@ from streamlit_app.ui_common import apply_theme
 apply_theme()
 
 from processing.image_search import search_images
-from processing.product_schema import format_inr, normalize_sku, price_value
+from processing.product_schema import availability_display, format_inr, normalize_sku, price_value
 from processing.unified_products import flattened_rows, load_normalized_products, resolve_normalized_product
 
 
@@ -25,7 +25,7 @@ SITE_LABELS = {
 }
 
 
-def _card_price(card: dict | None) -> str:
+def _card_price(site: str, card: dict | None) -> str:
     if not isinstance(card, dict):
         return "NA"
     for field in ("price_value", "offer_price_value", "normal_price_value", "price", "offer_price", "normal_price"):
@@ -34,26 +34,28 @@ def _card_price(card: dict | None) -> str:
             value = value.get("value") or value.get("formattedValue")
         parsed = price_value(value)
         if parsed is not None:
-            return format_inr(parsed) or f"INR {parsed:,.2f}"
-    return "NA"
+            return str(availability_display(site, card, format_inr(parsed) or f"INR {parsed:,.2f}"))
+    return str(availability_display(site, card, "NA"))
 
 
 def _render_platform_card(site: str, label: str, card: dict | None) -> None:
     """Render a fixed text-left/image-right card without empty image columns."""
-    if not isinstance(card, dict):
-        return
     text, image = st.columns([5, 1], vertical_alignment="center")
     with text:
         st.markdown(f"**{label}**")
+        if not isinstance(card, dict):
+            st.write("Price: NA")
+            st.caption("Not matched / not present in the data")
+            return
         if site != "ajio":
             st.write(card.get("title") or "NA")
-            st.write(f"Price: {_card_price(card)}")
+            st.write(f"Price: {_card_price(site, card)}")
             identifier = card.get("source_product_id") or card.get("product_id") or card.get("asin") or card.get("sku")
             st.caption(f"ID: {identifier or 'NA'}")
         else:
             # AJIO data has inconsistent nested price objects; show only its
             # normalized selling price as requested.
-            st.write(f"Price: {_card_price(card)}")
+            st.write(f"Price: {_card_price(site, card)}")
         if card.get("url"):
             st.link_button(f"Open {label}", card["url"])
     with image:

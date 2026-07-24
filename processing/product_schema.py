@@ -7,6 +7,26 @@ import re
 MARKETPLACES = ("amazon", "ajio", "columbia", "adventuras", "myntra", "tatacliq")
 
 
+def availability_display(site: str, card: dict | None, value: Any = "NA") -> Any:
+    """Return the marketplace value with the agreed availability semantics.
+
+    Only Columbia and Adventuras explicitly report stock state in the source
+    data.  For those sites, an explicit ``false`` means out of stock.  A
+    missing card (AJIO, Myntra, TataCliq, or any other marketplace) means the
+    product was not found/matched and must remain ``NA``; it is not evidence of
+    being out of stock.  Amazon records are evidence that the product exists,
+    even when its price is unavailable.
+    """
+    normalized_site = "adventuras" if site == "adventure" else site
+    if (
+        normalized_site in {"columbia", "adventuras"}
+        and isinstance(card, dict)
+        and card.get("availability", card.get("available")) is False
+    ):
+        return "OOS"
+    return "NA" if value in (None, "") else value
+
+
 def normalize_sku(value: Any) -> str | None:
     """Remove size/fit suffixes from Columbia-style product SKU values.
 

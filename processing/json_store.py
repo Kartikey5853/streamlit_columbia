@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
+import time
+from errno import EACCES, EBUSY, EPERM
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 
 def load_json(path: Path, default: Any) -> Any:
@@ -12,12 +16,55 @@ def load_json(path: Path, default: Any) -> Any:
         return json.load(handle)
 
 
+def unique_temp_path(path: Path) -> Path:
+    """Return a sibling temp path that cannot collide with another writer."""
+    return path.with_name(f".{path.name}.{os.getpid()}.{uuid4().hex}.tmp")
+
+
+def replace_file_with_retry(temporary: Path, destination: Path, *, attempts: int = 12) -> None:
+    """Atomically replace a file, tolerating short-lived Windows file locks."""
+    last_error: OSError | None = None
+    for attempt in range(attempts):
+        try:
+            os.replace(temporary, destination)
+            return
+        except OSError as exc:
+            last_error = exc
+            if exc.errno not in {EACCES, EBUSY, EPERM} and getattr(exc, "winerror", None) not in {5, 32, 33}:
+                raise
+            if attempt < attempts - 1:
+                time.sleep(0.15 * (attempt + 1))
+    raise PermissionError(
+        f"Could not replace {destination} after {attempts} attempts; another program is still using the file."
+    ) from last_error
+
+
 def save_json_atomic(path: Path, value: Any) -> None:
+    """Write JSON safely without exposing partial files to the UI or pipeline."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with tmp.open("w", encoding="utf-8") as handle:
-        json.dump(value, handle, indent=2, ensure_ascii=False)
-    tmp.replace(path)
+    tmp = unique_temp_path(path)
+    try:
+        with tmp.open("w", encoding="utf-8") as handle:
+            json.dump(value, handle, indent=2, ensure_ascii=False)
+            handle.flush()
+            os.fsync(handle.fileno())
+        replace_file_with_retry(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def save_bytes_atomic(path: Path, value: bytes) -> None:
+    """Binary counterpart for portable pipeline artifacts."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = unique_temp_path(path)
+    try:
+        with tmp.open("wb") as handle:
+            handle.write(value)
+            handle.flush()
+            os.fsync(handle.fileno())
+        replace_file_with_retry(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def product_list(payload: Any) -> list[dict]:
