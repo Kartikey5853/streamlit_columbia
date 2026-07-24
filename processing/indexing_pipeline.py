@@ -8,11 +8,12 @@ import time
 import traceback
 from datetime import datetime
 
-from .catalog_engine import build_final_tuples, build_visual_index
+from .catalog_engine import enrich_normalized_products_with_clip
 from .config import load_config
-from .platform_paths import current_json_path, log_path
+from .platform_paths import NORMALIZED_PRODUCTS, log_path
 from .process_status import mark_started, mark_stopped, update_site_status
 from .structured_logging import get_scraper_logger, log_event
+from .unified_products import build_normalized_products
 
 
 PIPELINE_SITE = "matcher"
@@ -20,71 +21,50 @@ PIPELINE_SITE = "matcher"
 
 def _normalize_step(step: str) -> str:
     aliases = {
-        "1": "index",
-        "2": "index",
-        "3": "match",
-        "4": "match",
-        "5": "match",
-        "all": "all",
-        "index": "index",
-        "match": "match",
+        "1": "exact", "exact": "exact",
+        "2": "clip", "index": "clip", "match": "clip", "clip": "clip",
+        "3": "all", "4": "all", "5": "all", "all": "all",
     }
     return aliases.get(step, step)
 
 
 def run_pipeline(step: str = "all") -> dict:
+    """Run the single SKU/EAN-first pipeline.
+
+    1. Collapse Columbia/AJIO/Adventuras by normalised SKU and attach Amazon
+       by every Columbia EAN.  2. Build the three-site CLIP index.  3. Query
+       each normalized Columbia SKU once and attach its best Myntra/TataCliq hit.
+    """
     logger = get_scraper_logger(PIPELINE_SITE, log_path(PIPELINE_SITE))
-    mark_started(PIPELINE_SITE, os.getpid(), "Indexing pipeline starting")
+    mark_started(PIPELINE_SITE, os.getpid(), "Unified pipeline starting")
     normalized_step = _normalize_step(step)
-    log_event(logger, logging.INFO, "PIPELINE", f"START step={step} normalized={normalized_step}")
-    summary = {
-        "visual_index": 0,
-        "tuple_count": 0,
-        "match_count": 0,
-        "rejected_count": 0,
-    }
+    summary: dict = {"normalized_products": 0, "columbia_clip_queries": 0, "myntra_clip_linked": 0, "tatacliq_clip_linked": 0}
+    log_event(logger, logging.INFO, "PIPELINE", f"START unified step={step} normalized={normalized_step}")
 
     try:
-        if normalized_step in {"all", "index"}:
+        if normalized_step in {"all", "exact"}:
             started = time.perf_counter()
-            all_sources = [current_json_path(site) for site in ("amazon", "ajio", "columbia", "adventuras", "myntra", "tatacliq")]
-            log_event(logger, logging.INFO, "STEP-1", "START Building shared all-platform visual index")
-            result = build_visual_index(all_sources)
-            summary["visual_index"] = result["embedded"]
-            update_site_status(PIPELINE_SITE, {"success_count": 1, "message": "Visual index ready"})
-            elapsed = time.perf_counter() - started
-            log_event(
-                logger,
-                logging.INFO,
-                "STEP-1",
-                (
-                    f"DONE shared visual index in {elapsed:.2f}s; embedded={result.get('embedded', 0)} "
-                    f"cached={bool(result.get('cached'))} download_failures={result.get('download_failures', 0)}"
-                ),
-            )
+            payload = build_normalized_products(NORMALIZED_PRODUCTS)
+            summary.update(payload.get("summary", {}))
+            log_event(logger, logging.INFO, "STEP-1", f"DONE exact SKU/EAN assembly in {time.perf_counter() - started:.2f}s; rows={summary.get('normalized_products', 0)}")
+            update_site_status(PIPELINE_SITE, {"success_count": 1, "message": "Exact SKU/EAN dataset ready"})
+        else:
+            from .unified_products import load_normalized_products
+            payload = load_normalized_products(NORMALIZED_PRODUCTS)
+            if not payload.get("products"):
+                raise RuntimeError("Run the exact SKU/EAN step before CLIP enrichment.")
 
-        if normalized_step in {"all", "match"}:
+        if normalized_step in {"all", "clip"}:
             started = time.perf_counter()
-            log_event(logger, logging.INFO, "STEP-2", "START Building Columbia-eligible canonical tuples from the shared visual index")
-            payload = build_final_tuples()
-            summary["tuple_count"] = payload["summary"]["tuples"]
-            summary["match_count"] = payload["summary"]["accepted_cross_market_matches"]
-            summary["rejected_count"] = max(0, (summary["tuple_count"] * 2) - summary["match_count"])
-            update_site_status(PIPELINE_SITE, {"success_count": 2, "message": "Final tuples ready"})
-            elapsed = time.perf_counter() - started
-            log_event(
-                logger,
-                logging.INFO,
-                "STEP-2",
-                (
-                    f"DONE final tuples in {elapsed:.2f}s; tuples={summary['tuple_count']} "
-                    f"accepted={summary['match_count']} rejected={summary['rejected_count']}"
-                ),
-            )
+            candidate_limit = int(load_config().get("unified_clip_candidate_limit", 100))
+            payload = enrich_normalized_products_with_clip(payload, candidate_limit=candidate_limit, output=NORMALIZED_PRODUCTS)
+            summary.update(payload.get("summary", {}))
+            log_event(logger, logging.INFO, "STEP-2", f"DONE Columbia-to-Myntra/TataCliq CLIP enrichment in {time.perf_counter() - started:.2f}s; queries={summary.get('columbia_clip_queries', 0)}")
+            update_site_status(PIPELINE_SITE, {"success_count": 2, "message": "Unified six-site dataset ready"})
 
         log_event(logger, logging.INFO, "PIPELINE", f"DONE summary={json.dumps(summary, ensure_ascii=False)}")
         update_site_status(PIPELINE_SITE, {"message": f"Completed at {datetime.now().isoformat(timespec='seconds')}"})
-        mark_stopped(PIPELINE_SITE, "Indexing pipeline complete")
+        mark_stopped(PIPELINE_SITE, "Unified pipeline complete")
         return summary
     except Exception as exc:
         trace = traceback.format_exc(limit=20)
@@ -96,8 +76,8 @@ def run_pipeline(step: str = "all") -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the shared indexing and matching pipeline.")
-    parser.add_argument("--step", choices=["all", "index", "match", "1", "2", "3", "4", "5"], default="all")
+    parser = argparse.ArgumentParser(description="Run the unified SKU/EAN and targeted CLIP pipeline.")
+    parser.add_argument("--step", choices=["all", "exact", "clip", "index", "match", "1", "2", "3", "4", "5"], default="all")
     args = parser.parse_args()
     print(json.dumps(run_pipeline(args.step), indent=2))
 

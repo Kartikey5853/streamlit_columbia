@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 import streamlit as st
@@ -10,164 +11,172 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from processing.excel_export import excel_bytes
-from processing.platform_paths import FINAL_TUPLES
-from processing.product_schema import format_inr, normalize_sku
-from processing.product_store import all_price_history_by_tuple, price_history_for, resolve_tuples, tuples_with_latest_prices
-from streamlit_app.ui_common import read_json
+from processing.json_store import load_json
+from processing.platform_paths import PRICE_HISTORY
+from processing.product_schema import format_inr, price_value
+from processing.unified_products import load_normalized_products, resolve_normalized_product
 
 
 SITE_LABELS = {
     "amazon": "Amazon", "ajio": "AJIO", "columbia": "Columbia",
-    "adventuras": "Adventuras", "myntra": "Myntra", "tatacliq": "TataCliQ",
+    "adventure": "Adventuras", "myntra": "Myntra", "tatacliq": "TataCliq",
 }
+HISTORY_SOURCE = {"adventure": "adventuras"}
 
 
-def _tuple_title(row: dict) -> str:
-    for site in ("columbia", "amazon", "ajio", "myntra", "tatacliq", "adventuras"):
+def _title(row: dict) -> str:
+    for site in ("columbia", "amazon", "ajio", "adventure", "myntra", "tatacliq"):
         card = row.get(site)
         if isinstance(card, dict) and card.get("title"):
             return str(card["title"])
     return "Untitled product"
 
 
-def _site_identifier(row: dict, site: str) -> tuple[str, str] | None:
-    """Return the marketplace-owned ID that lets a user identify this listing."""
-    card = row.get(site)
-    if not isinstance(card, dict):
+def _history_by_sku(products: dict[str, dict]) -> dict[str, dict[str, list[dict]]]:
+    """Join stored price-history records to current unified cards by site + ID."""
+    raw_records = load_json(PRICE_HISTORY, {"records": {}}).get("records", {})
+    by_listing: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    if isinstance(raw_records, dict):
+        for record in raw_records.values():
+            if not isinstance(record, dict):
+                continue
+            source, product_id = str(record.get("source") or ""), record.get("source_product_id")
+            if source and product_id:
+                by_listing[(source, str(product_id))].append(record)
+    for records in by_listing.values():
+        records.sort(key=lambda item: str(item.get("scrape_date") or ""))
+
+    result: dict[str, dict[str, list[dict]]] = {}
+    for sku, row in products.items():
+        if not isinstance(row, dict):
+            continue
+        sites: dict[str, list[dict]] = {}
+        for site in SITE_LABELS:
+            card = row.get(site)
+            if not isinstance(card, dict):
+                continue
+            product_id = card.get("source_product_id") or card.get("product_id")
+            records = by_listing.get((HISTORY_SOURCE.get(site, site), str(product_id)), []) if product_id else []
+            if records:
+                sites[site] = records
+        if sites:
+            result[str(sku)] = sites
+    return result
+
+
+def _selling_price(record: dict) -> float | None:
+    value = record.get("offer_price_value")
+    if value is None:
+        value = record.get("normal_price_value")
+    try:
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
         return None
-    if site == "amazon":
-        value = card.get("ean") or row.get("EAN")
-        if value:
-            return "EAN", str(value)
-        value = card.get("asin") or card.get("source_product_id")
-        return ("ASIN", str(value)) if value else None
-    if site == "columbia":
-        value = normalize_sku(card.get("sku") or row.get("columbia_sku"))
-        return ("SKU", value) if value else None
-    value = card.get("product_id") or card.get("source_product_id") or card.get("sku")
-    return ("Product ID", str(value)) if value else None
 
 
-def _site_label(row: dict, site: str) -> str:
-    identifier = _site_identifier(row, site)
-    if not identifier:
-        return SITE_LABELS[site]
-    label, value = identifier
-    return f"{SITE_LABELS[site]} · {label}: {value}"
+def _changed_price_rows(products: dict[str, dict], histories: dict[str, dict[str, list[dict]]]) -> list[dict]:
+    rows: list[dict] = []
+    for sku, sites in histories.items():
+        row = products.get(sku)
+        if not isinstance(row, dict):
+            continue
+        for site, records in sites.items():
+            priced = [(record, _selling_price(record)) for record in records]
+            priced = [(record, value) for record, value in priced if value is not None]
+            if len(priced) < 2:
+                continue
+            previous_record, previous_price = priced[-2]
+            latest_record, latest_price = priced[-1]
+            if previous_price == latest_price:
+                continue
+            card = row.get(site) if isinstance(row.get(site), dict) else {}
+            product_id = card.get("source_product_id") or card.get("product_id") or card.get("asin") or "-"
+            rows.append({
+                "Canonical Product ID": f"canonical:sku:{sku}",
+                "Title": card.get("title") or _title(row),
+                "Product ID": product_id,
+                "Platform": SITE_LABELS[site],
+                "Previous Price": format_inr(previous_price) or previous_price,
+                "New Price": format_inr(latest_price) or latest_price,
+                "Difference": format_inr(latest_price - previous_price) or (latest_price - previous_price),
+                "Normalized SKU": sku,
+                "EAN(s)": ", ".join(row.get("ean_numbers") or []) or "-",
+                "Changed On": latest_record.get("scrape_date") or "-",
+                "_site": site,
+            })
+    return sorted(rows, key=lambda item: str(item["Changed On"]), reverse=True)
+
+
+def _render_chart(sku: str, row: dict, histories: dict[str, list[dict]], selected_site: str | None = None) -> None:
+    sites = list(histories)
+    initial_index = sites.index(selected_site) if selected_site in sites else 0
+    platform = st.selectbox("Platform", sites, index=initial_index, format_func=lambda site: SITE_LABELS[site])
+    chart_rows, table_rows = [], []
+    for record in histories[platform]:
+        normal, special = record.get("normal_price_value"), record.get("offer_price_value")
+        chart_rows.append({
+            "Scrape Date": record.get("scrape_date"),
+            "Selling / Special Price": special if special is not None else normal,
+            "Normal Price": normal,
+            "Special Price": special,
+        })
+        table_rows.append({
+            "Date": record.get("scrape_date"),
+            "Normalized SKU": sku,
+            "Normal Price": record.get("normal_price"),
+            "Offer / Special Price": record.get("offer_price"),
+            "Availability": record.get("availability"),
+        })
+    import pandas as pd
+    st.line_chart(pd.DataFrame(chart_rows).sort_values("Scrape Date"), x="Scrape Date", y="Selling / Special Price", use_container_width=True)
+    st.dataframe(pd.DataFrame(table_rows), use_container_width=True, hide_index=True)
+    st.download_button(
+        "Download price history.xlsx",
+        data=excel_bytes(table_rows, "price_history"),
+        file_name=f"price_history_{sku}_{platform}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 st.title("Time Series")
-st.caption("Find a canonical tuple by ID, SKU, EAN, source product ID/ASIN, or title; then select one available platform.")
-payload = tuples_with_latest_prices(read_json(FINAL_TUPLES, {"products": {}}))
+st.caption("Search by normalized SKU or any EAN, or select a row to view its price history.")
+payload = load_normalized_products()
+products = payload.get("products", {}) if isinstance(payload, dict) else {}
+histories = _history_by_sku(products)
+query = st.text_input("Search product", placeholder="Normalized SKU or EAN").strip()
 
-
-def _price_changes(products: dict) -> list[dict]:
-    history_by_tuple = all_price_history_by_tuple()
-    changes = []
-    for canonical_id, row in products.items():
-        if not isinstance(row, dict):
-            continue
-        for site in SITE_LABELS:
-            history = [r for r in history_by_tuple.get(str(canonical_id), []) if r.get("source") == site]
-            history.sort(key=lambda r: str(r.get("scrape_date") or ""))
-            if len(history) < 2:
-                continue
-            previous = history[-2]
-            latest = history[-1]
-            previous_price = previous.get("offer_price_value") if previous.get("offer_price_value") is not None else previous.get("normal_price_value")
-            latest_price = latest.get("offer_price_value") if latest.get("offer_price_value") is not None else latest.get("normal_price_value")
-            if previous_price is None or latest_price is None or float(previous_price) == float(latest_price):
-                continue
-            changes.append({
-                "Canonical Product ID": canonical_id,
-                "Product": _tuple_title(row),
-                "Platform": _site_label(row, site),
-                "Previous Price": format_inr(float(previous_price)),
-                "Latest Price": format_inr(float(latest_price)),
-                "Change": format_inr(float(latest_price) - float(previous_price)),
-                "Changed On": latest.get("scrape_date"),
-                "Source Product ID": latest.get("source_product_id"),
-            })
-    return sorted(changes, key=lambda item: str(item.get("Changed On") or ""), reverse=True)
-
-
-st.subheader("Products with changed prices")
-changed_rows = _price_changes(payload.get("products", {}) if isinstance(payload, dict) else {})
-if changed_rows:
+selected: tuple[str, dict] | None = None
+if query:
+    found = resolve_normalized_product(query, payload)
+    if not found:
+        st.warning("No matching unified product was found.")
+    else:
+        selected = found
+else:
+    table_rows = _changed_price_rows(products, histories)
+    st.subheader("Products with changed prices")
     try:
         import pandas as pd
-        st.dataframe(pd.DataFrame(changed_rows), use_container_width=True, hide_index=True)
-    except Exception:
-        st.write(changed_rows)
-else:
-    st.info("No product price changes found in the stored history.")
+        display_rows = [{key: value for key, value in item.items() if key != "_site"} for item in table_rows]
+        event = st.dataframe(pd.DataFrame(display_rows), use_container_width=True, hide_index=True, on_select="rerun", selection_mode="single-row")
+        selected_rows = event.selection.rows if event else []
+        if selected_rows:
+            change = table_rows[selected_rows[0]]
+            sku = change["Normalized SKU"]
+            selected = (sku, products[sku])
+            st.session_state["time_series_selected_site"] = change["_site"]
+    except TypeError:
+        st.dataframe([{key: value for key, value in item.items() if key != "_site"} for item in table_rows], use_container_width=True, hide_index=True)
+        sku = st.selectbox("Choose a product", [row["Normalized SKU"] for row in table_rows])
+        selected = (sku, products[sku])
 
-query = st.text_input("Search product", placeholder="Canonical ID, Columbia SKU, EAN, ASIN/product ID, or title")
-
-if not query.strip():
-    st.info("Enter an identifier or title to find a canonical product.")
-    st.stop()
-
-matches = resolve_tuples(query, payload)
-if not matches:
-    st.warning("No canonical tuple matched that identifier or title.")
-    st.stop()
-
-labels = {
-    f"{canonical_id} | {row.get('columbia_sku') or '-'} | {_tuple_title(row)}": (canonical_id, row)
-    for canonical_id, row in matches
-}
-selected_label = st.selectbox("Matching canonical tuples", list(labels))
-canonical_id, row = labels[selected_label]
-st.caption(f"Canonical Product ID: {canonical_id} • Columbia SKU: {row.get('columbia_sku') or '-'} • EAN: {row.get('EAN') or '-'}")
-
-available_sites = [site for site in SITE_LABELS if isinstance(row.get(site), dict)]
-if not available_sites:
-    st.warning("This canonical tuple has no source products to chart.")
-    st.stop()
-platform = st.selectbox("Platform", available_sites, format_func=lambda site: _site_label(row, site))
-history = [record for record in price_history_for(canonical_id) if record.get("source") == platform]
-
-if not history:
-    st.info(f"No stored {SITE_LABELS[platform]} price observations exist for this tuple yet.")
-    st.stop()
-
-chart_rows = []
-table_rows = []
-for record in history:
-    normal = record.get("normal_price_value")
-    special = record.get("offer_price_value")
-    selling = special if special is not None else normal
-    chart_rows.append({
-        "Scrape Date": record.get("scrape_date"),
-        "Selling / Special Price": selling,
-        "Normal Price": normal,
-        "Special Price": special,
-    })
-    table_rows.append({
-        "Date": record.get("scrape_date"),
-        "Normal Price": record.get("normal_price"),
-        "Offer / Special Price": record.get("offer_price"),
-        "Availability": record.get("availability"),
-        "Source Product ID": record.get("source_product_id"),
-    })
-
-try:
-    import pandas as pd
-
-    chart_frame = pd.DataFrame(chart_rows).sort_values("Scrape Date")
-    # The main series reflects selling price, including AJIO's special price.
-    st.line_chart(chart_frame, x="Scrape Date", y="Selling / Special Price", use_container_width=True)
-    st.subheader("Full historical price records")
-    st.dataframe(pd.DataFrame(table_rows), use_container_width=True, hide_index=True)
-except Exception:
-    st.write(chart_rows)
-    st.write(table_rows)
-
-if st.button("Create price-history Excel export"):
-    st.download_button(
-        "Download price_history.xlsx",
-        data=excel_bytes(table_rows, "price_history"),
-        file_name=f"price_history_{canonical_id.replace(':', '_')}_{platform}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+if selected:
+    sku, row = selected
+    st.divider()
+    st.subheader(_title(row))
+    st.caption(f"Normalized SKU: {sku} | EAN(s): {', '.join(row.get('ean_numbers') or []) or '-'}")
+    row_histories = histories.get(sku, {})
+    if row_histories:
+        _render_chart(sku, row, row_histories, st.session_state.get("time_series_selected_site"))
+    else:
+        st.info("This product is in the unified dataset, but no matching historical price records exist yet.")

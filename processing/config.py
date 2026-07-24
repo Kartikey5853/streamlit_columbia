@@ -14,6 +14,7 @@ DEFAULT_CONFIG = {
     "image_download_workers": 8,
     "visual_index_chunk_size": 64,
     "visual_match_top_k": 12,
+    "unified_clip_candidate_limit": 100,
     "match_threshold": 0.82,
     "match_clip_weight": 0.30,
     "match_title_weight": 0.15,

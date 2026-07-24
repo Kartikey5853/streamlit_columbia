@@ -29,6 +29,7 @@ from .platform_paths import (
     FINAL_TUPLES_MANIFEST,
     MARKETPLACE_PRODUCTS,
     METADATA_PKL,
+    NORMALIZED_PRODUCTS,
     VISUAL_INDEX_MANIFEST,
     current_json_path,
     dated_json_path,
@@ -583,6 +584,119 @@ def match_reference_to_targets(
     return best_by_site, scored
 
 
+def enrich_normalized_products_with_clip(
+    payload: dict,
+    *,
+    candidate_limit: int = 100,
+    output: Path | None = None,
+) -> dict:
+    """Attach one Myntra and TataCliq result to each normalized Columbia SKU.
+
+    Exact identifiers form the catalogue first.  CLIP is deliberately limited
+    to discovery for the two marketplaces that do not expose compatible SKU or
+    EAN values: Columbia is the query anchor and the FAISS index contains only
+    Columbia, Myntra, and TataCliq images. Exact Amazon/AJIO/Adventuras rows
+    are never re-matched visually.
+    """
+    products = payload.get("products", {}) if isinstance(payload, dict) else {}
+    if not isinstance(products, dict):
+        raise ValueError("Unified product payload must contain a products object.")
+
+    match_logger = get_scraper_logger("matcher", log_path("matcher"))
+    input_paths = [current_json_path(site) for site in ("columbia", "myntra", "tatacliq")]
+    log_event(match_logger, logging.INFO, "STEP-2A", "START CLIP index: Columbia, Myntra, TataCliq")
+    result = build_visual_index(input_paths)
+    index, metadata = load_visual_index()
+    embedding_cache = _load_embedding_cache()
+    limit = min(max(1, int(candidate_limit)), index.ntotal)
+    matched = {"myntra": 0, "tatacliq": 0}
+    queried = 0
+    eligible_rows = sum(isinstance(row, dict) and isinstance(row.get("columbia"), dict) for row in products.values())
+    log_event(match_logger, logging.INFO, "STEP-2B", f"START Columbia CLIP queries rows={eligible_rows} top_k={limit} vectors={index.ntotal}")
+
+    for row_sku, row in products.items():
+        if not isinstance(row, dict):
+            continue
+        # Each unified row has one representative Columbia product after
+        # sellable variants have been collapsed into the normalized SKU.
+        columbia = row.get("columbia")
+        if not isinstance(columbia, dict):
+            row["myntra"] = None
+            row["tatacliq"] = None
+            row["clip_matches"] = {}
+            continue
+        image = columbia.get("image") or columbia.get("image_url")
+        cached = embedding_cache.get(str(image)) if image else None
+        vector_value = cached.get("vector") if isinstance(cached, dict) else None
+        if vector_value is None:
+            row["myntra"] = None
+            row["tatacliq"] = None
+            row["clip_matches"] = {"status": "columbia_image_not_embedded"}
+            continue
+
+        vector = np.asarray(vector_value, dtype="float32").reshape(1, -1)
+        scores, positions = index.search(vector, limit)
+        best: dict[str, tuple[int, float, dict]] = {}
+        for rank, (score, position) in enumerate(zip(scores[0], positions[0]), start=1):
+            if position < 0 or position >= len(metadata):
+                continue
+            candidate = metadata[int(position)]
+            site = str(candidate.get("site") or "")
+            if site not in {"myntra", "tatacliq"} or site in best:
+                continue
+            best[site] = (rank, float(score), candidate)
+
+        queried += 1
+        clip_matches: dict[str, dict] = {}
+        for site in ("myntra", "tatacliq"):
+            selection = best.get(site)
+            if selection is None:
+                row[site] = None
+                continue
+            rank, score, candidate = selection
+            row[site] = product_card(candidate)
+            clip_matches[site] = {
+                "method": "clip_columbia_anchor",
+                "rank_in_top_candidates": rank,
+                "clip_score": round(score, 6),
+                "candidate_limit": limit,
+            }
+            matched[site] += 1
+            log_event(
+                match_logger,
+                logging.INFO,
+                "CLIP-MATCH",
+                f"sku={row_sku} site={site} rank={rank}/{limit} score={score:.6f} title={candidate.get('title') or '-'}",
+            )
+        row["clip_matches"] = clip_matches
+        if queried and queried % 100 == 0:
+            log_event(match_logger, logging.INFO, "STEP-2B", f"PROGRESS queries={queried}/{eligible_rows} myntra={matched['myntra']} tatacliq={matched['tatacliq']}")
+
+    payload["schema_version"] = max(2, int(payload.get("schema_version", 1)))
+    payload.setdefault("rules", {})["clip_matching"] = {
+        "anchor": "columbia",
+        "targets": ["myntra", "tatacliq"],
+        "candidate_limit": limit,
+        "index_sources": ["columbia", "myntra", "tatacliq"],
+    }
+    summary = payload.setdefault("summary", {})
+    summary.update({
+        "columbia_clip_queries": queried,
+        "myntra_clip_linked": matched["myntra"],
+        "tatacliq_clip_linked": matched["tatacliq"],
+        "visual_index": result,
+    })
+    payload["created_at"] = datetime.now().isoformat(timespec="seconds")
+
+    if output is not None:
+        save_json_atomic(output, payload)
+        from .unified_products import build_normalized_identifier_lookup
+        build_normalized_identifier_lookup(payload, write=True)
+    _save_embedding_cache(embedding_cache)
+    log_event(match_logger, logging.INFO, "STEP-2C", f"DONE Columbia CLIP queries={queried} myntra={matched['myntra']} tatacliq={matched['tatacliq']}")
+    return payload
+
+
 def _normalize_marketplace_row(row: dict | None, ean: str, include_target_sites: bool = False) -> dict:
     normalized = empty_tuple(ean)
     if isinstance(row, dict):
@@ -845,108 +959,69 @@ def build_final_tuples(output: Path = FINAL_TUPLES) -> dict:
     return payload
 
 
-def search_tuple_matches(image_path: Path, top_k: int = 5, minimum_similarity: float = 0.0) -> dict:
-    index, metadata = load_visual_index()
-    payload = load_json(FINAL_TUPLES, {"products": {}})
-    lookup = build_tuple_lookup(payload)
-    image = Image.open(image_path).convert("RGB")
-    vector = embed_image(image)
+def build_unified_tuple_lookup(payload: dict) -> dict[tuple[str, str], tuple[str, dict]]:
+    """Map a vector-indexed record back to the current normalized SKU tuple."""
+    lookup: dict[tuple[str, str], tuple[str, dict]] = {}
+    products = payload.get("products", {}) if isinstance(payload, dict) else {}
+    if not isinstance(products, dict):
+        return lookup
+    for raw_sku, row in products.items():
+        if not isinstance(row, dict):
+            continue
+        sku = str(row.get("sku") or raw_sku)
+        for site in ("columbia", "amazon", "ajio", "adventure", "myntra", "tatacliq"):
+            card = row.get(site)
+            if not isinstance(card, dict):
+                continue
+            vector_site = "adventuras" if site == "adventure" else site
+            for key in (card.get("source_product_id"), card.get("product_id"), card.get("url"), card.get("title")):
+                if key:
+                    lookup[(vector_site, str(key))] = (sku, row)
+    return lookup
+
+
+def _unified_image_matches(vector, index, metadata: list[dict], lookup: dict, top_k: int, minimum_similarity: float) -> list[dict]:
     count = min(max(1, top_k), index.ntotal)
     scores, positions = index.search(vector.astype("float32"), count)
-
-    matches = []
+    matches: list[dict] = []
     for score, position in zip(scores[0], positions[0]):
-        if position < 0 or position >= len(metadata):
+        if position < 0 or position >= len(metadata) or float(score) < minimum_similarity:
             continue
         candidate = metadata[int(position)]
-        similarity = float(score)
-        if similarity < minimum_similarity:
-            continue
-        canonical_id, row = None, None
         site = str(candidate.get("site") or "")
-        for key in (candidate.get("url"), candidate.get("product_id"), candidate.get("title")):
-            if not key:
-                continue
-            found = lookup.get((site, str(key)))
-            if found:
-                canonical_id, row = found
-                break
-        if not canonical_id or not row:
-            for key, candidate_row in payload.get("products", {}).items():
-                if not isinstance(candidate_row, dict):
-                    continue
-                card = candidate_row.get(candidate.get("site"))
-                if isinstance(card, dict) and (
-                    card.get("source_product_id") == candidate.get("source_product_id")
-                    or card.get("url") == candidate.get("url") or card.get("title") == candidate.get("title")
-                ):
-                    canonical_id = str(candidate_row.get("canonical_product_id") or key)
-                    row = candidate_row
-                    break
-        if not canonical_id or not row:
+        found = next((lookup.get((site, str(key))) for key in (candidate.get("url"), candidate.get("product_id"), candidate.get("title")) if key and lookup.get((site, str(key)))), None)
+        if not found:
             continue
+        sku, row = found
         matches.append({
-            "canonical_product_id": canonical_id,
-            "EAN": row.get("EAN"),
-            "site": candidate.get("site"),
-            "similarity": round(similarity, 6),
-            "candidate": {
-                "title": candidate.get("title"),
-                "price": candidate.get("price"),
-                "url": candidate.get("url"),
-                "image": candidate.get("image"),
-            },
+            "canonical_product_id": sku,
+            "EAN": (row.get("ean_numbers") or [None])[0],
+            "site": site,
+            "confidence": round(float(score), 6),
+            "similarity": round(float(score), 6),
             "tuple": row,
+            "candidate": {key: candidate.get(key) for key in ("title", "price", "url", "image")},
         })
-    return {
-        "query_image": str(image_path.resolve()),
-        "matches": matches,
-    }
+    return matches
+
+
+def search_tuple_matches(image_path: Path, top_k: int = 5, minimum_similarity: float = 0.0) -> dict:
+    index, metadata = load_visual_index()
+    lookup = build_unified_tuple_lookup(load_json(NORMALIZED_PRODUCTS, {"products": {}}))
+    vector = embed_image(Image.open(image_path).convert("RGB"))
+    return {"query_image": str(image_path.resolve()), "matches": _unified_image_matches(vector, index, metadata, lookup, top_k, minimum_similarity)}
 
 
 def search_tuple_matches_batch(image_paths: list[Path], top_k: int = 5, minimum_similarity: float = 0.0) -> dict:
     if len(image_paths) > 50:
         raise ValueError("Batch image search supports up to 50 images.")
-
     index, metadata = load_visual_index()
-    payload = load_json(FINAL_TUPLES, {"products": {}})
-    lookup = build_tuple_lookup(payload)
-
+    lookup = build_unified_tuple_lookup(load_json(NORMALIZED_PRODUCTS, {"products": {}}))
     results: list[dict] = []
     for image_path in image_paths:
-        image = Image.open(image_path).convert("RGB")
-        vector = embed_image(image)
-        count = min(max(1, top_k), index.ntotal)
-        scores, positions = index.search(vector.astype("float32"), count)
-
-        image_matches: list[dict] = []
-        for score, position in zip(scores[0], positions[0]):
-            if position < 0 or position >= len(metadata):
-                continue
-            candidate = metadata[int(position)]
-            similarity = float(score)
-            if similarity < minimum_similarity:
-                continue
-            canonical_id, row = None, None
-            site = str(candidate.get("site") or "")
-            for key in (candidate.get("url"), candidate.get("product_id"), candidate.get("title")):
-                if not key:
-                    continue
-                found = lookup.get((site, str(key)))
-                if found:
-                    canonical_id, row = found
-                    break
-            if not canonical_id or not row:
-                continue
-            image_matches.append({
-                "canonical_product_id": canonical_id,
-                "EAN": row.get("EAN"),
-                "site": site,
-                "confidence": round(similarity, 6),
-                "tuple": row,
-            })
-
-        top_match = image_matches[0] if image_matches else None
+        vector = embed_image(Image.open(image_path).convert("RGB"))
+        matches = _unified_image_matches(vector, index, metadata, lookup, top_k, minimum_similarity)
+        top_match = matches[0] if matches else None
         results.append({
             "filename": image_path.name,
             "query_image": str(image_path.resolve()),
@@ -954,13 +1029,9 @@ def search_tuple_matches_batch(image_paths: list[Path], top_k: int = 5, minimum_
             "matched_ean": top_match.get("EAN") if top_match else None,
             "confidence": top_match.get("confidence") if top_match else None,
             "tuple": top_match.get("tuple") if top_match else None,
-            "matches": image_matches,
+            "matches": matches,
         })
-
-    return {
-        "count": len(results),
-        "results": results,
-    }
+    return {"count": len(results), "results": results}
 
 
 def search_image_as_tuple(image_path: Path, top_k: int = 50) -> dict | None:

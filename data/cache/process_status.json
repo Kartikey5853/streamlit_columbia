@@ -1,16 +1,4 @@
 {
-  "fast_scrapers": {
-    "running": false,
-    "pid": null,
-    "child_pid": null,
-    "current_ean": null,
-    "success_count": 0,
-    "failure_count": 0,
-    "warning_count": 0,
-    "started_at": "2026-07-23T22:55:23",
-    "updated_at": "2026-07-23T22:56:04",
-    "message": "Fast scraper run complete"
-  },
   "matcher": {
     "running": false,
     "pid": null,
@@ -19,9 +7,9 @@
     "success_count": 2,
     "failure_count": 0,
     "warning_count": 0,
-    "started_at": "2026-07-23T22:57:10",
-    "updated_at": "2026-07-23T23:01:36",
-    "message": "Indexing pipeline complete"
+    "started_at": "2026-07-24T12:51:19",
+    "updated_at": "2026-07-24T12:52:23",
+    "message": "Unified pipeline complete"
   },
   "normalized": {
     "running": false,
@@ -31,8 +19,8 @@
     "success_count": 1,
     "failure_count": 0,
     "warning_count": 0,
-    "started_at": "2026-07-23T23:54:20",
-    "updated_at": "2026-07-23T23:54:23",
+    "started_at": "2026-07-24T12:51:19",
+    "updated_at": "2026-07-24T12:51:30",
     "message": "Unified SKU/EAN normalization complete"
   }
 }

@@ -18,7 +18,7 @@ from .platform_paths import (
     log_path,
     preferred_json_paths,
 )
-from .product_schema import price_value
+from .product_schema import normalize_sku, price_value
 from .product_store import normalize_product
 from .structured_logging import get_scraper_logger, log_event
 from .process_status import mark_started, mark_stopped, update_site_status
@@ -68,19 +68,13 @@ def _extract_eans(value: object) -> list[str]:
 
 
 def _normalized_sku(value: object) -> str | None:
-    """Normalize SKU formatting without removing its sellable variant.
+    """Return the shared style/colour SKU: the first two dash segments.
 
-    This is deliberately separate from ``product_schema.normalize_sku``.  The
-    unified catalog uses an exact marketplace SKU (for example
-    ``CU3935-348-O/S``) as its join key, so a size suffix must not be removed.
+    Columbia, AJIO, and Adventuras append sellable variants (size, fit, etc.)
+    to the same product identifier.  A row in the unified catalogue therefore
+    represents ``XXXXX-XXX``, never an individual size variant.
     """
-    if value is None:
-        return None
-    sku = str(value).strip().upper()
-    if not sku:
-        return None
-    sku = re.sub(r"[\u2010-\u2015\u2212]", "-", sku)
-    return re.sub(r"\s*-\s*", "-", sku)
+    return normalize_sku(value)
 
 
 def _raw_payload(raw: dict) -> dict:
@@ -161,6 +155,8 @@ def _empty_record(sku: str, columbia_card: dict) -> dict:
         "amazon": None,
         "ajio": None,
         "adventure": None,
+        "myntra": None,
+        "tatacliq": None,
     }
 
 
@@ -280,6 +276,8 @@ def _finalize_records(records: dict[str, dict]) -> dict[str, dict]:
             "amazon": row.get("amazon") or None,
             "ajio": row.get("ajio") or None,
             "adventure": row.get("adventure") or None,
+            "myntra": row.get("myntra") or None,
+            "tatacliq": row.get("tatacliq") or None,
         }
     return final
 
@@ -440,7 +438,7 @@ def build_normalized_products(
 
         finalized = _finalize_records(records)
         payload = {
-            "schema_version": 1,
+            "schema_version": 2,
             "primary_key": "sku",
             "created_at": datetime.now().isoformat(timespec="seconds"),
             "rules": {
@@ -450,8 +448,8 @@ def build_normalized_products(
                     "ajio": "exact SKU match against Columbia SKU",
                     "adventure": "exact SKU match against Columbia SKU",
                 },
-                "scope": ["columbia", "amazon", "ajio", "adventure"],
-                "no_clip": True,
+                "scope": ["columbia", "amazon", "ajio", "adventure", "myntra", "tatacliq"],
+                "clip_enrichment": "Amazon anchors query the Myntra/TataCliq candidate index in the unified pipeline",
             },
             "summary": {
                 "columbia_products": len(columbia_products),
@@ -510,6 +508,11 @@ def load_normalized_products(path: Path = NORMALIZED_PRODUCTS) -> dict:
 
 
 def flattened_rows(payload: dict | None = None) -> list[dict]:
+    """Return the complete, reviewable unified tuple table.
+
+    The viewer keeps only the review fields: product image, normalized SKU,
+    EANs, marketplace prices, titles, and product-page links.
+    """
     payload = payload or load_normalized_products()
     products = payload.get("products", {}) if isinstance(payload, dict) else {}
     if not isinstance(products, dict):
@@ -540,22 +543,31 @@ def flattened_rows(payload: dict | None = None) -> list[dict]:
         amazon = row.get("amazon") if isinstance(row.get("amazon"), dict) else None
         ajio = row.get("ajio") if isinstance(row.get("ajio"), dict) else None
         adventure = row.get("adventure") if isinstance(row.get("adventure"), dict) else None
-        image = _card_value(columbia or amazon or ajio or adventure, "image")
+        myntra = row.get("myntra") if isinstance(row.get("myntra"), dict) else None
+        tatacliq = row.get("tatacliq") if isinstance(row.get("tatacliq"), dict) else None
+        image = _card_value(columbia or amazon or ajio or adventure or myntra or tatacliq, "image")
         if image == "NA":
-            image = _card_value(columbia or amazon or ajio or adventure, "image_url")
-        rows.append({
+            image = _card_value(columbia or amazon or ajio or adventure or myntra or tatacliq, "image_url")
+        result = {
             "Product Image": image,
             "Columbia SKU": _normalized_sku(row.get("sku") or sku) or "NA",
-            "Columbia Product ID": _card_value(columbia, "source_product_id"),
             "EAN(s)": ", ".join(row.get("ean_numbers") or []) or "NA",
-            "Columbia Price": _price_text(columbia),
-            "Amazon Price": _price_text(amazon),
-            "AJIO Price": _price_text(ajio),
-            "Adventure Price": _price_text(adventure),
-            "Amazon Title": _card_value(amazon, "title"),
-            "AJIO Title": _card_value(ajio, "title"),
-            "Adventure Title": _card_value(adventure, "title"),
-        })
+        }
+        marketplace_cards = (
+            ("amazon", "Amazon", amazon),
+            ("ajio", "AJIO", ajio),
+            ("adventure", "Adventuras", adventure),
+            ("columbia", "Columbia", columbia),
+            ("myntra", "Myntra", myntra),
+            ("tatacliq", "TataCliq", tatacliq),
+        )
+        for _, label, card in marketplace_cards:
+            result[f"{label} Price"] = _price_text(card)
+        for _, label, card in marketplace_cards:
+            result[f"{label} Title"] = _card_value(card, "title")
+        for _, label, card in marketplace_cards:
+            result[f"{label} Product URL"] = _card_value(card, "url")
+        rows.append(result)
     rows.sort(key=lambda item: item.get("Columbia SKU", ""))
     return rows
 
