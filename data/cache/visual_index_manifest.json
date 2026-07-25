@@ -1,25 +1,25 @@
 {
   "sources": [
     {
-      "path": "D:\\streamlit_columbia3\\data\\json\\columbia\\latest_columbia.json",
-      "mtime_ns": 1784951884074954000,
+      "path": "E:\\Columbia Scraper 2.0\\data\\json\\columbia\\latest_columbia.json",
+      "mtime_ns": 1784920048730515600,
       "size": 143
     },
     {
-      "path": "D:\\streamlit_columbia3\\data\\json\\myntra\\latest_myntra.json",
-      "mtime_ns": 1784951885576931300,
+      "path": "E:\\Columbia Scraper 2.0\\data\\json\\myntra\\latest_myntra.json",
+      "mtime_ns": 1784919865883987100,
       "size": 2625675
     },
     {
-      "path": "D:\\streamlit_columbia3\\data\\json\\tatacliq\\latest_tatacliq.json",
-      "mtime_ns": 1784951885645628400,
+      "path": "E:\\Columbia Scraper 2.0\\data\\json\\tatacliq\\latest_tatacliq.json",
+      "mtime_ns": 1784920031719162200,
       "size": 3396555
     }
   ],
-  "index_path": "D:\\streamlit_columbia3\\data\\embeddings\\clip.index",
-  "metadata_path": "D:\\streamlit_columbia3\\data\\embeddings\\metadata.pkl",
+  "index_path": "E:\\Columbia Scraper 2.0\\data\\embeddings\\clip.index",
+  "metadata_path": "E:\\Columbia Scraper 2.0\\data\\embeddings\\metadata.pkl",
   "embedded": 3947,
-  "new_embeddings": 0,
-  "cache_path": "D:\\streamlit_columbia3\\data\\cache\\clip_embedding_cache.pkl",
-  "updated_at": "2026-07-25T10:03:16"
+  "new_embeddings": 3788,
+  "cache_path": "E:\\Columbia Scraper 2.0\\data\\cache\\clip_embedding_cache.pkl",
+  "updated_at": "2026-07-25T11:05:17"
 }
