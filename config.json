@@ -2,6 +2,7 @@
   "ajio_cooldown": 20,
   "columbia_cooldown": 2,
   "adventuras_cooldown": 30,
+<<<<<<< HEAD
   "match_threshold": 0.70,
   "match_clip_weight": 0.4,
   "match_dinov2_weight": 0.4,
@@ -18,7 +19,13 @@
   "price_near_rejection_score": 0.0,
   "reject_near_price_mismatch": true,
   "image_search_threshold": 0.88,
+=======
+  "cross_market_price_max_ratio": 1.6,
+  "title_minimum_score": 0.38,
+  "clip_minimum_score": 0.82,
+  "match_threshold": 0.82,
+  "image_search_threshold": 0.82,
+>>>>>>> b31912f (Amazon Pipeline Fixed)
   "price_refresh_delay_seconds": 1.5,
-  "use_dinov2": false,
   "python_executable": ""
 }

@@ -16,9 +16,13 @@ DEFAULT_CONFIG = {
     "visual_match_top_k": 12,
     "unified_clip_candidate_limit": 100,
     "cross_market_price_max_ratio": 1.60,
-    "title_minimum_score": 0.62,
-    "clip_minimum_score": 0.88,
-    "match_threshold": 0.88,
+    # Active CLIP pipeline gates.  Title/price are evidence gates and CLIP
+    # remains the visual ranking signal.
+    "title_minimum_score": 0.38,
+    "clip_minimum_score": 0.82,
+    # Kept for the legacy tuple builder, which remains part of the existing
+    # application but is not used by the normalized CLIP pipeline.
+    "match_threshold": 0.82,
     "match_clip_weight": 0.30,
     "match_title_weight": 0.15,
     "match_price_weight": 0.25,
@@ -29,7 +33,7 @@ DEFAULT_CONFIG = {
     "price_heavy_score": 0.20,
     "price_near_rejection_score": 0.0,
     "reject_near_price_mismatch": True,
-    "image_search_threshold": 0.88,
+    "image_search_threshold": 0.82,
     "price_refresh_delay_seconds": 1.5,
     "python_executable": "",
 }

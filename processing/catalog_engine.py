@@ -367,7 +367,14 @@ def collect_visual_records(paths: Iterable[Path]) -> list[IndexedRecord]:
     records: list[IndexedRecord] = []
     for path in paths:
         payload = load_json(path, {})
-        site = path.parent.name
+        # Scraper snapshots live in data_scraper/, so their parent directory
+        # is not the marketplace name.  Trust the explicit source marker in
+        # the JSON when available; otherwise retain the existing directory
+        # based convention for the dated/latest marketplace snapshots.
+        source = payload.get("source") if isinstance(payload, dict) else None
+        site = str(source).casefold() if source else path.parent.name.casefold()
+        if site == "adventure":
+            site = "adventuras"
         for idx, product in enumerate(product_list(payload)):
             record = _record_for_product(product, site, idx)
             if record is not None:
@@ -795,7 +802,17 @@ def enrich_normalized_products_with_clip(
         raise ValueError("Unified product payload must contain a products object.")
 
     match_logger = get_scraper_logger("matcher", log_path("matcher"))
-    input_paths = [current_json_path(site) for site in ("columbia", "myntra", "tatacliq")]
+    # Normalization already chooses the scraper JSON as the authoritative
+    # source when it is available.  Do the same here.  In particular, a
+    # failed/empty latest_columbia.json must not replace the populated
+    # data_scraper/columbia.json and leave the index without Columbia vectors.
+    input_paths: list[Path] = []
+    for site in ("columbia", "myntra", "tatacliq"):
+        paths = preferred_json_paths(site)
+        if paths:
+            input_paths.append(paths[0])
+        else:
+            input_paths.append(current_json_path(site))
     log_event(match_logger, logging.INFO, "STEP-2A", "START CLIP index: Columbia, Myntra, TataCliq")
     result = build_visual_index(input_paths)
     index, metadata = load_visual_index()
