@@ -90,14 +90,36 @@ def products_by_ean(payload: Any) -> dict[str, dict]:
     for key, product in source:
         if not isinstance(product, dict):
             continue
-        ean = normalize_ean(product.get("ean") or product.get("upc") or key)
-        if ean:
-            out[ean] = product
+        values = [product.get("ean"), product.get("upc"), product.get("all_eans"), product.get("ean_numbers"), key]
+        for value in values:
+            for ean in _extract_ean_values(value):
+                out[ean] = product
     for product in product_list(payload):
-        ean = normalize_ean(product.get("ean") or product.get("upc"))
-        if ean:
-            out[ean] = product
+        values = [product.get("ean"), product.get("upc"), product.get("all_eans"), product.get("ean_numbers")]
+        for value in values:
+            for ean in _extract_ean_values(value):
+                out[ean] = product
     return out
+
+
+def _extract_ean_values(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, dict):
+        values = value.values()
+    elif isinstance(value, (list, tuple, set)):
+        values = value
+    else:
+        values = [value]
+    found: list[str] = []
+    for item in values:
+        if isinstance(item, (list, tuple, set, dict)):
+            found.extend(_extract_ean_values(item))
+            continue
+        ean = normalize_ean(item)
+        if ean and ean not in found:
+            found.append(ean)
+    return found
 
 
 def normalize_ean(value: Any) -> str | None:

@@ -14,9 +14,10 @@ from streamlit_app.ui_common import apply_theme
 
 apply_theme()
 
+from processing.excel_export import excel_bytes
 from processing.image_search import search_images
 from processing.product_schema import availability_display, format_inr, normalize_sku, price_value
-from processing.unified_products import flattened_rows, load_normalized_products, resolve_normalized_product
+from processing.unified_products import load_normalized_products, resolve_normalized_product
 
 
 SITE_LABELS = {
@@ -72,7 +73,66 @@ def _render_unified_row(row: dict | None) -> None:
         f"EAN(s): {', '.join(row.get('ean_numbers') or []) or '-'}"
     )
     for source, label in (("amazon", "Amazon"), ("ajio", "AJIO"), ("adventure", "Adventuras"), ("columbia", "Columbia"), ("myntra", "Myntra"), ("tatacliq", "TataCliq")):
-        _render_platform_card(source, label, row.get(source))
+        card = row.get(source)
+        if source == "adventure" and not isinstance(card, dict):
+            card = row.get("adventuras")
+        _render_platform_card(source, label, card)
+
+
+def _card_value(card: dict | None, *fields: str) -> str:
+    if not isinstance(card, dict):
+        return "NA"
+    for field in fields:
+        value = card.get(field)
+        if value not in (None, "", [], {}):
+            return str(value)
+    return "NA"
+
+
+def _export_row(sku: str, row: dict, filename: str | None = None) -> dict:
+    sources = (
+        ("amazon", "Amazon"),
+        ("ajio", "AJIO"),
+        ("adventure", "Adventuras"),
+        ("columbia", "Columbia"),
+        ("myntra", "Myntra"),
+        ("tatacliq", "TataCliQ"),
+    )
+    columbia = row.get("columbia") if isinstance(row.get("columbia"), dict) else None
+    image_card = next((
+        row.get(source) if source != "adventure" else row.get("adventure") or row.get("adventuras")
+        for source, _label in sources
+        if isinstance(row.get(source) if source != "adventure" else row.get("adventure") or row.get("adventuras"), dict)
+    ), columbia)
+    result = {
+        "Search File": filename or "Identifier search",
+        "Canonical Product ID": row.get("canonical_product_id") or f"canonical:sku:{sku}",
+        "Columbia SKU": row.get("sku") or row.get("columbia_sku") or _card_value(columbia, "sku") or sku,
+        "EAN(s)": ", ".join(row.get("ean_numbers") or []) or row.get("EAN") or row.get("ean") or "NA",
+        "Product Image": _card_value(image_card, "image", "image_url"),
+    }
+    for source, label in sources:
+        card = row.get(source)
+        if source == "adventure" and not isinstance(card, dict):
+            card = row.get("adventuras")
+        result[f"{label} Product ID"] = _card_value(card, "source_product_id", "product_id", "asin")
+        result[f"{label} SKU"] = _card_value(card, "sku")
+        result[f"{label} Title"] = _card_value(card, "title")
+        result[f"{label} Price"] = _card_price(source, card if isinstance(card, dict) else None)
+        result[f"{label} URL"] = _card_value(card, "url")
+    return result
+
+
+def _render_export_button() -> None:
+    rows = st.session_state.get("search_export_rows") or []
+    if not rows:
+        return
+    st.download_button(
+        f"Export {len(rows)} search result(s) to Excel",
+        data=excel_bytes(rows, "search_results"),
+        file_name="search_results.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 st.title("Search")
@@ -83,6 +143,7 @@ st.info(
     "• Image search may take some time. Please wait until the first batch has been fully processed before uploading another batch."
 )
 normalized_payload = load_normalized_products()
+st.session_state.setdefault("search_export_rows", [])
 
 identifier_query = st.text_area(
     "Identifier or title search (one per line, comma-separated also supported)",
@@ -105,12 +166,17 @@ if identifier_query and st.button("Search products"):
     if missing:
         st.caption("No tuple found for: " + ", ".join(missing))
     if resolved:
+        st.session_state["search_export_rows"] = [_export_row(sku, row) for sku, row in resolved if isinstance(row, dict)]
+        _render_export_button()
         for canonical_id, row in resolved:
             with st.expander(f"{canonical_id}", expanded=True):
                 if isinstance(row, dict) and "ean_numbers" in row:
                     _render_unified_row(row)
     elif not missing:
+        st.session_state["search_export_rows"] = []
         st.info("No final canonical tuples matched those inputs.")
+else:
+    _render_export_button()
 
 st.subheader("Batch Image Search")
 uploads = st.file_uploader("Upload image(s)", type=["jpg", "jpeg", "png", "webp"], accept_multiple_files=True)
@@ -147,14 +213,18 @@ if uploads and 0 < len(uploads) <= 50 and st.button("Run batch image search"):
             except Exception:
                 st.write(summary_rows)
             displayed: set[str] = set()
+            export_rows: list[dict] = []
             for index, item in enumerate(results, start=1):
                 canonical_id = item.get("canonical_product_id") or "-"
                 row = item.get("tuple")
                 if canonical_id in displayed or not isinstance(row, dict):
                     continue
                 displayed.add(canonical_id)
+                export_rows.append(_export_row(str(canonical_id), row, item.get("filename")))
                 with st.expander(f"{item.get('filename') or f'image_{index}'} | {canonical_id}"):
                     _render_unified_row(row)
+            st.session_state["search_export_rows"] = export_rows
+            _render_export_button()
     except Exception as exc:
         st.error(str(exc))
     finally:

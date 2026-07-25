@@ -91,6 +91,12 @@ def refresh_command(site: str, headless: bool) -> list[str]:
     return command
 
 
+def amazon_v3_refresh_command(headless: bool, tabs: int = 5) -> list[str]:
+    command = [python_cmd(), "-m", "processing.amazon_v3_refresh_prices", "--tabs", str(max(1, tabs))]
+    command.append("--headless" if headless else "--headed")
+    return command
+
+
 def start_process(site: str, command: list[str]) -> None:
     status = get_site_status(site)
     if status.get("running"):

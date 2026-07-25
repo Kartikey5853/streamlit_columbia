@@ -107,6 +107,7 @@ def _source_eans(raw: dict) -> list[str]:
             source.get("barcode"),
             source.get("ean_numbers"),
             source.get("eans"),
+            source.get("all_eans"),
             source.get("variant_mapping"),
         ])
     return _dedupe(ean for value in values for ean in _extract_eans(value))
@@ -128,6 +129,12 @@ def _source_product(source: str, raw: dict) -> dict:
         "image": image,
         "raw": original_raw,
     }
+    if raw.get("amazon_url") and not result.get("url"):
+        result["url"] = raw.get("amazon_url")
+    if raw.get("status"):
+        result["status"] = raw.get("status")
+    if raw.get("match_method"):
+        result["match_method"] = raw.get("match_method")
     return result
 
 
@@ -195,11 +202,18 @@ def normalize_source_products(source_products: dict[str, list[dict]]) -> dict[st
         "ajio": parse_ajio,
         "adventure": parse_adventure,
     }
-    return {
-        source: [parsers[source](raw) for raw in products if isinstance(raw, dict)]
-        for source, products in source_products.items()
-        if source in parsers
-    }
+    normalized: dict[str, list[dict]] = {}
+    for source, products in source_products.items():
+        if source not in parsers:
+            continue
+        cards = [parsers[source](raw) for raw in products if isinstance(raw, dict)]
+        if source == "amazon":
+            cards = [
+                card for card in cards
+                if card.get("url") and (card.get("title") or card.get("price") or card.get("price_value"))
+            ]
+        normalized[source] = cards
+    return normalized
 
 
 def _normalize_columbia_products(products: list[dict]) -> dict[str, dict]:

@@ -36,7 +36,7 @@ VISUAL_INDEX_MANIFEST = CACHE_DIR / "visual_index_manifest.json"
 FINAL_TUPLES_MANIFEST = CACHE_DIR / "final_tuples_manifest.json"
 
 SCRAPER_JSON_PRODUCTS = {
-    "amazon": BASE_DIR / "data_scraper" / "amazon.json",
+    "amazon": BASE_DIR / "data_scraper" / "result.json",
     "ajio": BASE_DIR / "data_scraper" / "ajio.json",
     "columbia": BASE_DIR / "data_scraper" / "columbia.json",
     "adventuras": BASE_DIR / "data_scraper" / "adventuras.json",

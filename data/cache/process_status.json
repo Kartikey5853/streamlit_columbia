@@ -7,8 +7,8 @@
     "success_count": 2,
     "failure_count": 0,
     "warning_count": 0,
-    "started_at": "2026-07-25T01:22:24",
-    "updated_at": "2026-07-25T01:23:18",
+    "started_at": "2026-07-25T10:26:00",
+    "updated_at": "2026-07-25T10:28:20",
     "message": "Unified pipeline complete"
   },
   "normalized": {
@@ -19,8 +19,8 @@
     "success_count": 1,
     "failure_count": 0,
     "warning_count": 0,
-    "started_at": "2026-07-25T01:22:24",
-    "updated_at": "2026-07-25T01:22:31",
+    "started_at": "2026-07-25T10:26:00",
+    "updated_at": "2026-07-25T10:26:09",
     "message": "Unified SKU/EAN normalization complete"
   },
   "fast_scrapers": {
@@ -34,5 +34,17 @@
     "started_at": "2026-07-25T00:25:27",
     "updated_at": "2026-07-25T00:37:45",
     "message": "Fast scraper run complete"
+  },
+  "amazon_v3_refresh": {
+    "running": true,
+    "pid": 5576,
+    "child_pid": null,
+    "current_ean": "886108765177",
+    "success_count": 163,
+    "failure_count": 0,
+    "warning_count": 30,
+    "started_at": "2026-07-25T09:44:39",
+    "updated_at": "2026-07-25T09:51:31",
+    "message": "Refreshing 886108765177"
   }
 }

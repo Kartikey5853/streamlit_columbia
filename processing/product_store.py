@@ -62,13 +62,17 @@ def source_product_id(source: str, product: dict[str, Any]) -> str | None:
     """Return the stable, source-owned identity without title-based fallbacks."""
     # An ASIN is Amazon's actual source identity; do not replace it with EAN.
     if source == "amazon":
-        value = _text(_field(product, "source_product_id", "asin"))
-        # Earlier normalized artifacts used UPC/EAN as source_product_id.
-        # Prefer the ASIN recoverable from URL when that legacy shape occurs.
-        if value and not (value.isdigit() and len(value) in {12, 13}):
+        url_asin = _asin_from_url(_field(product, "url", "link", "amazon_url"))
+        asin = _text(_field(product, "asin"))
+        if url_asin or asin:
+            return url_asin or asin
+        value = _text(_field(product, "source_product_id"))
+        # V3 search result rows carry the Columbia input product ID in
+        # source_product_id. Do not use that as Amazon's listing identity.
+        if value and not value.startswith("gid://") and not (value.isdigit() and len(value) not in {12, 13}):
             return value
-        return _asin_from_url(_field(product, "url", "link")) or value or _text(_field(product, "ean", "upc"))
-    for field in ("source_product_id", "product_id", "productId", "id", "sku"):
+        return _text(_field(product, "ean", "upc"))
+    for field in ("source_product_id", "product_id", "productId", "id", "code", "sellerSku", "sku"):
         value = _text(_field(product, field))
         if value:
             return value
@@ -100,7 +104,7 @@ def normalize_product(source: str, product: dict[str, Any], scraped_at: str | No
         "asin": _text(_field(product, "asin")) or (_asin_from_url(_field(product, "url", "link")) if source == "amazon" else None),
         "ean": _text(_field(product, "ean", "upc")),
         "title": _text(_field(product, "title", "name")),
-        "url": _text(_field(product, "url", "link")),
+        "url": _text(_field(product, "url", "link", "amazon_url")),
         "image_url": _text(image),
         "image_urls": [str(value) for value in images if value],
         "normal_price": normal_price,

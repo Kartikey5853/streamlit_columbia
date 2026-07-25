@@ -36,7 +36,7 @@ ARGUMENTS
 ---------
     --input             Path to input JSON (Columbia schema).
     --output            Path to output file. Extension decides format (.json or .csv).
-    --tabs              Number of concurrent headless tabs/pages. Default: 4
+    --tabs              Number of concurrent tabs. Default: 4
     --domain            Amazon domain to search. Default: amazon.in
     --headless          Run headless (default True). Use --no-headless to see the browser.
     --timeout           Per-page navigation timeout in ms. Default: 30000
@@ -69,7 +69,7 @@ import re
 import sys
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from playwright.async_api import async_playwright, Page, TimeoutError as PWTimeout
 
@@ -91,10 +91,7 @@ def split_sku(sku: str | None) -> tuple[str, str]:
     if len(parts) <= 2:
         return sku, ""
 
-    # Base SKU is always first two parts
     base = f"{parts[0]}-{parts[1]}"
-
-    # Everything else is size / region / fit
     size = "-".join(parts[2:])
 
     return base, size
@@ -112,7 +109,7 @@ class SkuGroupTask:
 @dataclass
 class ScrapeResult:
     sku: str
-    ean: str = ""                                   # the barcode actually searched
+    ean: str = ""
     all_eans: list[str] = field(default_factory=list)
     source_product_id: str = ""
     source_title: str = ""
@@ -121,9 +118,70 @@ class ScrapeResult:
     asin: Optional[str] = None
     title: Optional[str] = None
     price: Optional[str] = None
+    price_value: Optional[float] = None
+    currency: Optional[str] = None
     upc: Optional[str] = None
     style_number: Optional[str] = None
+    match_method: Optional[str] = None   # "ean" | "title" -- how the listing was found
     error: Optional[str] = None
+
+
+def clean_price(raw: Any, currency_symbol: str = "\u20b9") -> Optional[str]:
+    if raw in (None, ""):
+        return None
+
+    text = re.sub(r"\s+", " ", str(raw).replace("\xa0", " ")).strip()
+    if not text:
+        return None
+
+    patterns = [
+        r"(?:\u20b9|Rs\.?|INR)\s*([\d,]+(?:\.\d{1,2})?)",
+        r"([\d,]+(?:\.\d{1,2})?)\s*(?:\u20b9|Rs\.?|INR)",
+        r"^\s*([\d,]+(?:\.\d{1,2})?)\s*$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, re.I)
+        if match:
+            amount = match.group(1).replace(",", "")
+            try:
+                value = float(amount)
+            except ValueError:
+                continue
+            if value <= 0:
+                continue
+            return f"{currency_symbol}{value:,.2f}"
+    return None
+
+
+def price_value(raw: Any) -> Optional[float]:
+    if raw in (None, ""):
+        return None
+    match = re.search(r"[\d,]+(?:\.\d+)?", str(raw))
+    if not match:
+        return None
+    try:
+        return float(match.group(0).replace(",", ""))
+    except ValueError:
+        return None
+
+
+def _iter_json_values(value: Any):
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from _iter_json_values(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _iter_json_values(child)
+
+
+def _price_from_json_ld(value: Any) -> Optional[str]:
+    for node in _iter_json_values(value):
+        for key in ("price", "lowPrice", "highPrice"):
+            price = clean_price(node.get(key))
+            if price:
+                return price
+    return None
 
 
 def extract_tasks(data) -> list[SkuGroupTask]:
@@ -139,7 +197,6 @@ def extract_tasks(data) -> list[SkuGroupTask]:
     for prod in products:
         raw = prod.get("raw", {}) or {}
 
-        # Prefer raw.sku (e.g. "WS3220-275-1X"); fall back to first variant's sku
         sku_source = raw.get("sku")
         if not sku_source:
             variants = prod.get("variant_mapping") or []
@@ -152,7 +209,6 @@ def extract_tasks(data) -> list[SkuGroupTask]:
             continue
         seen_bases.add(base_sku)
 
-        # Collect every EAN belonging to this group (top-level + all variants)
         all_eans: list[str] = []
         top_ean = prod.get("ean")
         if top_ean:
@@ -162,7 +218,6 @@ def extract_tasks(data) -> list[SkuGroupTask]:
             if e and e not in all_eans:
                 all_eans.append(e)
 
-        # The representative barcode for the group == the search term
         search_ean = raw.get("barcode") or top_ean or (all_eans[0] if all_eans else None)
         if not search_ean:
             continue
@@ -178,11 +233,18 @@ def extract_tasks(data) -> list[SkuGroupTask]:
     return tasks
 
 
-async def find_first_result_url(page: Page, domain: str, ean: str, timeout: int) -> Optional[str]:
-    search_url = f"https://www.{domain}/s?k={ean}"
+def _title_search_query(title: str, max_words: int = 7) -> str:
+    """Trim a product title down to a tight, high-signal search query
+    (brand + key nouns) rather than throwing the whole sentence at Amazon."""
+    words = re.sub(r"[^\w\s-]", " ", title).split()
+    return " ".join(words[:max_words])
+
+
+async def find_first_result_url(page: Page, domain: str, query: str, timeout: int) -> Optional[str]:
+    from urllib.parse import quote_plus
+    search_url = f"https://www.{domain}/s?k={quote_plus(query)}"
     await page.goto(search_url, timeout=timeout, wait_until="domcontentloaded")
 
-    # Basic captcha/block detection
     body_text = (await page.content()).lower()
     if "api-services-support@amazon.com" in body_text or "enter the characters you see below" in body_text:
         raise RuntimeError("CAPTCHA")
@@ -192,6 +254,11 @@ async def find_first_result_url(page: Page, domain: str, ean: str, timeout: int)
         await page.wait_for_selector(result_selector, timeout=timeout)
     except PWTimeout:
         return None
+
+    # Give lazily-rendered result tiles a brief moment to settle before we
+    # grab the first link -- under high tab concurrency this can otherwise
+    # race the render and produce false not_found/None hrefs.
+    await page.wait_for_timeout(random.randint(200, 500))
 
     first = page.locator(result_selector).first
     link = first.locator("a.a-link-normal.s-no-outline, h2 a").first
@@ -203,66 +270,137 @@ async def find_first_result_url(page: Page, domain: str, ean: str, timeout: int)
     return href
 
 
+# JS extractor run inside the page context. Doing everything in ONE
+# evaluate() call (instead of many separate Playwright locator round-trips)
+# is what makes this reliable -- Amazon's price widgets are injected/mutated
+# by client-side JS shortly after DOMContentLoaded, and a single synchronous
+# querySelector pass taken *after* we've explicitly waited for that widget
+# beats racing several locator().count()/text_content() calls against it.
+_PAGE_EXTRACT_JS = """
+() => {
+    const clean = v => (v || "").replace(/\\s+/g, " ").trim();
+
+    const priceSelectors = [
+        "#corePrice_feature_div .a-price .a-offscreen",
+        "#corePrice_feature_div .a-offscreen",
+        "#corePriceDisplay_desktop_feature_div .a-price .a-offscreen",
+        "#corePriceDisplay_desktop_feature_div .a-offscreen",
+        "#apex_desktop .a-price .a-offscreen",
+        "#apex_desktop .a-offscreen",
+        "#newBuyBoxPrice",
+        "#priceblock_ourprice",
+        "#priceblock_dealprice",
+        "#price_inside_buybox",
+        "span[data-a-color='price'] .a-offscreen",
+        ".a-price .a-offscreen",
+        ".a-price-whole",
+    ];
+
+    let price = null;
+    for (const sel of priceSelectors) {
+        const el = document.querySelector(sel);
+        const text = clean(el?.textContent);
+        if (text) { price = text; break; }
+    }
+
+    if (!price) {
+        const metaSelectors = [
+            "meta[property='product:price:amount']",
+            "meta[property='og:price:amount']",
+            "meta[name='twitter:data1']",
+            "meta[name='price']",
+        ];
+        for (const sel of metaSelectors) {
+            const val = clean(document.querySelector(sel)?.getAttribute("content"));
+            if (val) { price = val; break; }
+        }
+    }
+
+    const details = {};
+    document.querySelectorAll(
+        "#detailBulletsWrapper_feature_div li, " +
+        "#productDetails_detailBullets_sections1 tr, " +
+        "#productDetails_techSpec_section_1 tr, " +
+        "table.prodDetTable tr"
+    ).forEach(row => {
+        const text = clean(row.textContent);
+        if (!text) return;
+        const parts = text.split(/:\\s*|\\n/);
+        if (parts.length >= 2) {
+            const key = clean(parts[0]).toLowerCase();
+            const val = clean(parts.slice(1).join(" "));
+            if (key && val) details[key] = val;
+        }
+    });
+
+    const jsonLd = [...document.querySelectorAll("script[type='application/ld+json']")]
+        .map(n => { try { return JSON.parse(n.textContent || "{}"); } catch (_) { return null; } })
+        .filter(Boolean);
+
+    return {
+        title: clean(document.querySelector("#productTitle")?.textContent),
+        price,
+        details,
+        jsonLd,
+        pageText: clean(document.body?.textContent).slice(0, 20000),
+    };
+}
+"""
+
+
 async def scrape_product_page(page: Page, url: str, timeout: int) -> dict:
     await page.goto(url, timeout=timeout, wait_until="domcontentloaded")
 
+    # Give Amazon's client-side JS time to paint the price widget before we
+    # read the DOM. This is the step v3 was missing/rushing before.
+    try:
+        await page.wait_for_selector(
+            "#corePrice_feature_div, #apex_desktop, #corePriceDisplay_desktop_feature_div, .a-price",
+            timeout=8000,
+        )
+    except PWTimeout:
+        pass
+
+    try:
+        await page.wait_for_load_state("networkidle", timeout=min(timeout, 5000))
+    except Exception:
+        pass
+
+    # small settle delay, same idea as v2's random wait before reading price
+    await page.wait_for_timeout(random.randint(300, 700))
+
     data = {"amazon_url": url}
 
-    # ASIN — most reliably comes from the URL itself
     m = re.search(r"/dp/([A-Z0-9]{10})", url)
     if m:
         data["asin"] = m.group(1)
 
-    # Title
     try:
-        title_el = page.locator("#productTitle").first
-        data["title"] = (await title_el.inner_text(timeout=5000)).strip()
+        extracted = await page.evaluate(_PAGE_EXTRACT_JS)
     except Exception:
-        data["title"] = None
+        extracted = {}
 
-    # Price — try a few common selectors
-    price = None
-    for sel in [
-        "#corePrice_feature_div .a-price .a-offscreen",
-        "#corePriceDisplay_desktop_feature_div .a-price .a-offscreen",
-        ".a-price .a-offscreen",
-        "#priceblock_ourprice",
-        "#priceblock_dealprice",
-    ]:
-        try:
-            loc = page.locator(sel).first
-            if await loc.count() > 0:
-                price = (await loc.inner_text(timeout=3000)).strip()
-                if price:
-                    break
-        except Exception:
-            continue
+    data["title"] = extracted.get("title") or None
+
+    price = clean_price(extracted.get("price"))
+
+    # Fallback #1: JSON-LD price (covers pages where the offscreen span
+    # wasn't present but structured data is).
+    if not price:
+        price = _price_from_json_ld(extracted.get("jsonLd") or [])
+
+    # Fallback #2: raw currency-symbol regex over the visible page text.
+    if not price:
+        page_text = extracted.get("pageText") or ""
+        match = re.search(r"(?:\u20b9|Rs\.?|INR)\s*[\d,]+(?:\.\d{1,2})?", page_text, re.I)
+        if match:
+            price = clean_price(match.group(0))
+
     data["price"] = price
+    data["price_value"] = price_value(price)
+    data["currency"] = "INR" if price else None
 
-    # Product details table(s): detail bullets + tech spec tables. Look for
-    # "ASIN", "UPC", "Item model number" key/value pairs across all of them.
-    detail_map = {}
-    row_selectors = [
-        "#detailBulletsWrapper_feature_div li",
-        "#productDetails_detailBullets_sections1 tr",
-        "#productDetails_techSpec_section_1 tr",
-        "table.prodDetTable tr",
-    ]
-    for sel in row_selectors:
-        rows = page.locator(sel)
-        count = await rows.count()
-        for i in range(count):
-            try:
-                row_text = (await rows.nth(i).inner_text(timeout=2000)).strip()
-            except Exception:
-                continue
-            if not row_text:
-                continue
-            parts = re.split(r":\s*|\n", row_text, maxsplit=1)
-            if len(parts) == 2:
-                key = parts[0].strip().lower()
-                val = parts[1].strip()
-                detail_map[key] = val
+    detail_map = extracted.get("details") or {}
 
     def find_key(*keywords):
         for k, v in detail_map.items():
@@ -285,36 +423,55 @@ async def process_task(page: Page, task: SkuGroupTask, domain: str, timeout: int
         source_product_id=task.source_product_id, source_title=task.source_title,
     )
 
+    # Try the EAN first (highest confidence: barcode search only matches if
+    # it's really that SKU), then fall back to a title search. Many Amazon.in
+    # listings simply don't have the source barcode indexed as a searchable
+    # keyword even though the product itself is live on the site -- a pure
+    # EAN search then returns zero results (not_found) even though a title
+    # search would find it immediately.
+    queries = [("ean", task.search_ean)]
+    if task.source_title:
+        queries.append(("title", _title_search_query(task.source_title)))
+
     attempt = 0
     while attempt <= retries:
         attempt += 1
-        try:
-            product_url = await find_first_result_url(page, domain, task.search_ean, timeout)
-            if not product_url:
-                result.status = "not_found"
+        hit = False
+
+        for method, query in queries:
+            try:
+                product_url = await find_first_result_url(page, domain, query, timeout)
+                if not product_url:
+                    result.status = "not_found"
+                    continue
+
+                scraped = await scrape_product_page(page, product_url, timeout)
+                for k, v in scraped.items():
+                    setattr(result, k, v)
+                result.status = "ok"
+                result.match_method = method
+                result.error = None
+                hit = True
                 break
 
-            scraped = await scrape_product_page(page, product_url, timeout)
-            for k, v in scraped.items():
-                setattr(result, k, v)
-            result.status = "ok"
-            break
+            except RuntimeError as e:
+                if str(e) == "CAPTCHA":
+                    result.status = "captcha"
+                    result.error = "Hit CAPTCHA/bot-check page"
+                    await asyncio.sleep(delay * 3)
+                    continue
+                result.status = "error"
+                result.error = str(e)
 
-        except RuntimeError as e:
-            if str(e) == "CAPTCHA":
-                result.status = "captcha"
-                result.error = "Hit CAPTCHA/bot-check page"
-                await asyncio.sleep(delay * 3)
-                continue
-            result.status = "error"
-            result.error = str(e)
-            break
+            except Exception as e:
+                result.status = "error"
+                result.error = f"{type(e).__name__}: {e}"
+                await asyncio.sleep(delay)
 
-        except Exception as e:
-            result.status = "error"
-            result.error = f"{type(e).__name__}: {e}"
-            await asyncio.sleep(delay)
-            continue
+        if hit or result.status in ("captcha", "error"):
+            break
+        # both ean and title queries came back not_found -- retry the loop
+        # (network/render hiccups can cause transient false not_founds)
 
     return result
 
@@ -330,7 +487,8 @@ async def worker(name: int, page: Page, task_queue: "asyncio.Queue[SkuGroupTask]
 
         result = await process_task(page, task, domain, timeout, delay, retries)
 
-        print(f"[tab {name}] {task.base_sku} (ean {task.search_ean}) -> {result.status}"
+        price_text = f" price={result.price_value:g}" if result.price_value is not None else " price=N/A"
+        print(f"[tab {name}] {task.base_sku} (ean {task.search_ean}) -> {result.status}{price_text}"
               f"{' (' + result.title[:60] + ')' if result.title else ''}")
 
         async with results_lock:
@@ -415,7 +573,6 @@ def write_output(results: list[ScrapeResult], output_path: str):
     rows = [asdict(r) for r in results]
 
     if out.suffix.lower() == ".csv":
-        # CSV can't hold a list cell cleanly, so join all_eans with ";"
         csv_rows = []
         for r in rows:
             r = dict(r)

@@ -43,6 +43,7 @@ from .platform_paths import (
     current_json_path,
     dated_json_path,
     log_path,
+    preferred_json_paths,
 )
 from .product_schema import MARKETPLACES, empty_tuple, price_value, product_card
 from .structured_logging import get_scraper_logger, log_event
@@ -143,6 +144,15 @@ TITLE_NOISE_WORDS = {
     "maroon", "multi", "multicolor", "colour", "color", "regular", "fit", "new",
 }
 ROMAN_NUMERALS = {"i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"}
+ROMAN_TO_INT = {
+    "i": "1", "ii": "2", "iii": "3", "iv": "4", "v": "5",
+    "vi": "6", "vii": "7", "viii": "8", "ix": "9", "x": "10",
+}
+GENDER_WORDS = {
+    "men": "men", "mens": "men", "man": "men", "male": "men",
+    "women": "women", "womens": "women", "woman": "women", "female": "women",
+    "unisex": "unisex", "kids": "kids", "kid": "kids", "child": "kids", "youth": "kids",
+}
 
 
 def _title_tokens(value: str | None) -> set[str]:
@@ -150,6 +160,30 @@ def _title_tokens(value: str | None) -> set[str]:
         token for token in re.findall(r"[a-z0-9]+", str(value or "").casefold())
         if (token not in TITLE_NOISE_WORDS and len(token) > 1) or token in ROMAN_NUMERALS
     }
+
+
+def _title_gender(value: str | None) -> set[str]:
+    tokens = re.findall(r"[a-z0-9]+", str(value or "").casefold())
+    return {GENDER_WORDS[token] for token in tokens if token in GENDER_WORDS}
+
+
+def _title_versions(value: str | None) -> set[str]:
+    text = str(value or "").casefold()
+    versions = {f"{int(float(match))}.0" for match in re.findall(r"\b\d+(?:\.\d+)?\b", text)}
+    for token in re.findall(r"[a-z]+", text):
+        if token in ROMAN_TO_INT:
+            versions.add(f"{ROMAN_TO_INT[token]}.0")
+    return versions
+
+
+def _compatible_gender(reference: set[str], candidate: set[str]) -> bool:
+    if not reference or not candidate:
+        return True
+    if "unisex" in reference or "unisex" in candidate:
+        return True
+    if "kids" in reference or "kids" in candidate:
+        return reference == candidate
+    return bool(reference & candidate)
 
 
 def _title_frequency(metadata: list[dict]) -> tuple[dict[str, int], int]:
@@ -175,25 +209,52 @@ def _title_weight(token: str, frequency: dict[str, int], corpus_size: int) -> fl
 def _title_evidence(reference_titles: list[str], candidate_title: str | None, frequency: dict[str, int], corpus_size: int) -> dict:
     reference = set().union(*(_title_tokens(title) for title in reference_titles)) if reference_titles else set()
     candidate = _title_tokens(candidate_title)
+    reference_gender = set().union(*(_title_gender(title) for title in reference_titles)) if reference_titles else set()
+    candidate_gender = _title_gender(candidate_title)
+    reference_versions = set().union(*(_title_versions(title) for title in reference_titles)) if reference_titles else set()
+    candidate_versions = _title_versions(candidate_title)
     if not reference:
-        return {"title_score": 0.0, "title_coverage": 0.0, "unexpected_tokens": [], "title_status": "missing_reference_title"}
+        return {
+            "title_score": 0.0, "title_coverage": 0.0, "unexpected_tokens": [],
+            "missing_required_tokens": [], "title_status": "missing_reference_title",
+            "title_hard_reject": True,
+        }
     weights = {token: _title_weight(token, frequency, corpus_size) for token in reference}
     total_weight = sum(weights.values()) or 1.0
     coverage = sum(weights[token] for token in reference & candidate) / total_weight
+    missing_required = reference - candidate
     unexpected = candidate - reference
     unexpected_weight = sum(_title_weight(token, frequency, corpus_size) for token in unexpected)
     candidate_weight = sum(_title_weight(token, frequency, corpus_size) for token in candidate) or 1.0
-    # Extra uncommon vocabulary normally identifies a different model.  The
-    # penalty is bounded so harmless retailer wording cannot erase a strong
-    # model-name match.
-    oov_penalty = min(0.40, 0.40 * unexpected_weight / candidate_weight)
+    oov_penalty = min(0.75, 0.75 * unexpected_weight / candidate_weight)
+    missing_penalty = min(0.75, 0.18 * len(missing_required))
     roman_match = (reference & ROMAN_NUMERALS) == (candidate & ROMAN_NUMERALS)
-    score = coverage * (1.0 - oov_penalty) * (1.0 if roman_match else 0.55)
+    gender_match = _compatible_gender(reference_gender, candidate_gender)
+    version_match = reference_versions == candidate_versions
+    hard_reject = (not gender_match) or (not roman_match) or (not version_match)
+    score = coverage * (1.0 - oov_penalty) * (1.0 - missing_penalty)
+    if hard_reject:
+        score = 0.0
+    if not hard_reject and coverage < 0.58:
+        score *= 0.35
+    status = "ok"
+    if not gender_match:
+        status = "gender_mismatch"
+    elif not version_match or not roman_match:
+        status = "version_mismatch"
+    elif missing_required:
+        status = "missing_model_words"
     return {
         "title_score": round(score, 6),
         "title_coverage": round(coverage, 6),
         "unexpected_tokens": sorted(unexpected),
-        "title_status": "ok" if roman_match else "version_mismatch",
+        "missing_required_tokens": sorted(missing_required),
+        "reference_gender": sorted(reference_gender),
+        "candidate_gender": sorted(candidate_gender),
+        "reference_versions": sorted(reference_versions),
+        "candidate_versions": sorted(candidate_versions),
+        "title_status": status,
+        "title_hard_reject": hard_reject,
     }
 
 
@@ -610,8 +671,11 @@ def _score_candidate(reference: dict, candidate: dict, config: dict) -> dict:
     title_score = title_similarity(reference.get("title") or reference.get("name"), candidate.get("title"))
     price_score, price_status, price_difference = strict_price_score(reference.get("price"), candidate.get("price"), config)
     score = confidence(clip_score, title_score, price_score, config)
-    accepted = score >= float(config["match_threshold"]) and not (
-        bool(config.get("reject_near_price_mismatch", True)) and price_status == "near_rejection"
+    clip_eligible = clip_score >= float(config.get("clip_minimum_score", 0.88))
+    accepted = (
+        clip_eligible
+        and score >= float(config["match_threshold"])
+        and not (bool(config.get("reject_near_price_mismatch", True)) and price_status == "near_rejection")
     )
     return {
         "clip_score": clip_score,
@@ -622,6 +686,7 @@ def _score_candidate(reference: dict, candidate: dict, config: dict) -> dict:
         "price_difference": price_difference,
         "confidence": score,
         "accepted": accepted,
+        "clip_eligible": clip_eligible,
         "site": candidate["site"],
         "title": candidate.get("title"),
         "price": candidate.get("price"),
@@ -781,7 +846,10 @@ def enrich_normalized_products_with_clip(
             title = _title_evidence(reference_titles, candidate.get("title"), token_frequency, title_corpus_size)
             price = _price_evidence(price_profile, candidate.get("price_value") or candidate.get("price"), config)
             clip_score = max(0.0, float(score))
-            title_eligible = title["title_score"] >= float(config.get("title_minimum_score", 0.35))
+            title_eligible = (
+                not title.get("title_hard_reject")
+                and title["title_score"] >= float(config.get("title_minimum_score", 0.35))
+            )
             clip_eligible = clip_score >= float(config.get("clip_minimum_score", 0.0))
             eligible = bool(price["price_eligible"] and title_eligible and clip_eligible)
             evaluated.append({
@@ -1252,7 +1320,8 @@ def search_image_as_tuple(image_path: Path, top_k: int = 50) -> dict | None:
 
 
 def build_ean_rows() -> dict[str, dict]:
-    amazon_products = products_by_ean(load_json(AMAZON_PRODUCTS, {}))
+    amazon_source = next(iter(preferred_json_paths("amazon")), AMAZON_PRODUCTS)
+    amazon_products = products_by_ean(load_json(amazon_source, {}))
     marketplace_store = load_marketplace_store(MARKETPLACE_PRODUCTS)
     direct_sources = {
         site: products_by_ean(load_json(current_json_path(site), {}))
